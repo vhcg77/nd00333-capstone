@@ -43,7 +43,7 @@
       "execution_count": 1,
       "metadata": {
         "gather": {
-          "logged": 1633913644521
+          "logged": 1633965741371
         },
         "jupyter": {
           "outputs_hidden": false,
@@ -144,7 +144,7 @@
         "ws = Workspace.from_config()\n",
         "\n",
         "# choose a name for experiment\n",
-        "experiment_name = 'automl-experiment'\n",
+        "experiment_name = 'Telecom customer Churn'\n",
         "\n",
         "experiment=Experiment(ws, experiment_name)\n",
         "\n",
@@ -173,24 +173,41 @@
       ],
       "outputs": [
         {
-          "output_type": "execute_result",
-          "execution_count": 3,
-          "data": {
-            "text/plain": "       SeniorCitizen       tenure  MonthlyCharges  TotalCharges\ncount    7043.000000  7043.000000     7043.000000   7032.000000\nmean        0.162147    32.371149       64.761692   2283.300441\nstd         0.368612    24.559481       30.090047   2266.771362\nmin         0.000000     0.000000       18.250000     18.800000\n25%         0.000000     9.000000       35.500000    401.450000\n50%         0.000000    29.000000       70.350000   1397.475000\n75%         0.000000    55.000000       89.850000   3794.737500\nmax         1.000000    72.000000      118.750000   8684.800000",
-            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>SeniorCitizen</th>\n      <th>tenure</th>\n      <th>MonthlyCharges</th>\n      <th>TotalCharges</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>count</th>\n      <td>7043.000000</td>\n      <td>7043.000000</td>\n      <td>7043.000000</td>\n      <td>7032.000000</td>\n    </tr>\n    <tr>\n      <th>mean</th>\n      <td>0.162147</td>\n      <td>32.371149</td>\n      <td>64.761692</td>\n      <td>2283.300441</td>\n    </tr>\n    <tr>\n      <th>std</th>\n      <td>0.368612</td>\n      <td>24.559481</td>\n      <td>30.090047</td>\n      <td>2266.771362</td>\n    </tr>\n    <tr>\n      <th>min</th>\n      <td>0.000000</td>\n      <td>0.000000</td>\n      <td>18.250000</td>\n      <td>18.800000</td>\n    </tr>\n    <tr>\n      <th>25%</th>\n      <td>0.000000</td>\n      <td>9.000000</td>\n      <td>35.500000</td>\n      <td>401.450000</td>\n    </tr>\n    <tr>\n      <th>50%</th>\n      <td>0.000000</td>\n      <td>29.000000</td>\n      <td>70.350000</td>\n      <td>1397.475000</td>\n    </tr>\n    <tr>\n      <th>75%</th>\n      <td>0.000000</td>\n      <td>55.000000</td>\n      <td>89.850000</td>\n      <td>3794.737500</td>\n    </tr>\n    <tr>\n      <th>max</th>\n      <td>1.000000</td>\n      <td>72.000000</td>\n      <td>118.750000</td>\n      <td>8684.800000</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
-          },
-          "metadata": {}
+          "output_type": "error",
+          "ename": "UserErrorException",
+          "evalue": "UserErrorException:\n\tMessage: Experiment name must be between 1 and 255 characters long. Its first character has to be alphanumeric, and the rest may contain hyphens and underscores. No whitespace is allowed.\n\tInnerException None\n\tErrorResponse \n{\n    \"error\": {\n        \"code\": \"UserError\",\n        \"message\": \"Experiment name must be between 1 and 255 characters long. Its first character has to be alphanumeric, and the rest may contain hyphens and underscores. No whitespace is allowed.\"\n    }\n}",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mUserErrorException\u001b[0m                        Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-2-0219576f0455>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m      4\u001b[0m \u001b[0mexperiment_name\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;34m'Telecom customer Churn'\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      5\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m----> 6\u001b[0;31m \u001b[0mexperiment\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mExperiment\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mws\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mexperiment_name\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m      7\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m      8\u001b[0m \u001b[0;31m# Try to load the dataset from the Workspace. Otherwise, create it from the file\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/core/experiment.py\u001b[0m in \u001b[0;36m__init__\u001b[0;34m(self, workspace, name, _skip_name_validation, _id, _archived_time, _create_in_cloud, _experiment_dto, **kwargs)\u001b[0m\n\u001b[1;32m    125\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    126\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0m_skip_name_validation\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 127\u001b[0;31m             \u001b[0mcheck_valid_resource_name\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mname\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m\"Experiment\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    128\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    129\u001b[0m         \u001b[0;31m# Get or create the experiment from the workspace\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/_base_sdk_common/common.py\u001b[0m in \u001b[0;36mcheck_valid_resource_name\u001b[0;34m(resource_name, resource_type)\u001b[0m\n\u001b[1;32m    181\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mresource_type\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mlower\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;34m'experiment'\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    182\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0m_valid_experiment_name\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mresource_name\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 183\u001b[0;31m             \u001b[0;32mraise\u001b[0m \u001b[0mUserErrorException\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmessage\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mformat\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mresource_type\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mEXPERIMENT_LENGTH_MIN\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mEXPERIMENT_LENGTH_MAX\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    184\u001b[0m     \u001b[0;32melif\u001b[0m \u001b[0;32mnot\u001b[0m \u001b[0m_valid_workspace_name\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mresource_name\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    185\u001b[0m         \u001b[0;32mraise\u001b[0m \u001b[0mUserErrorException\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mmessage\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mformat\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mresource_type\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m3\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;36m33\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mUserErrorException\u001b[0m: UserErrorException:\n\tMessage: Experiment name must be between 1 and 255 characters long. Its first character has to be alphanumeric, and the rest may contain hyphens and underscores. No whitespace is allowed.\n\tInnerException None\n\tErrorResponse \n{\n    \"error\": {\n        \"code\": \"UserError\",\n        \"message\": \"Experiment name must be between 1 and 255 characters long. Its first character has to be alphanumeric, and the rest may contain hyphens and underscores. No whitespace is allowed.\"\n    }\n}"
+          ]
         }
       ],
-      "execution_count": 3,
+      "execution_count": 2,
       "metadata": {
         "gather": {
-          "logged": 1633913715155
+          "logged": 1633961246228
         },
         "jupyter": {
           "outputs_hidden": false,
           "source_hidden": false
         },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Check the first five rows:"
+      ],
+      "metadata": {
         "nteract": {
           "transient": {
             "deleting": false
@@ -206,10 +223,131 @@
       "outputs": [
         {
           "output_type": "execute_result",
-          "execution_count": 4,
+          "execution_count": 3,
           "data": {
             "text/plain": "   customerID  gender  SeniorCitizen  Partner  Dependents  tenure  \\\n0  7590-VHVEG  Female              0     True       False       1   \n1  5575-GNVDE    Male              0    False       False      34   \n2  3668-QPYBK    Male              0    False       False       2   \n3  7795-CFOCW    Male              0    False       False      45   \n4  9237-HQITU  Female              0    False       False       2   \n\n   PhoneService     MultipleLines InternetService OnlineSecurity  ...  \\\n0         False  No phone service             DSL             No  ...   \n1          True                No             DSL            Yes  ...   \n2          True                No             DSL            Yes  ...   \n3         False  No phone service             DSL            Yes  ...   \n4          True                No     Fiber optic             No  ...   \n\n  DeviceProtection TechSupport StreamingTV StreamingMovies        Contract  \\\n0               No          No          No              No  Month-to-month   \n1              Yes          No          No              No        One year   \n2               No          No          No              No  Month-to-month   \n3              Yes         Yes          No              No        One year   \n4               No          No          No              No  Month-to-month   \n\n  PaperlessBilling              PaymentMethod MonthlyCharges  TotalCharges  \\\n0             True           Electronic check          29.85         29.85   \n1            False               Mailed check          56.95       1889.50   \n2             True               Mailed check          53.85        108.15   \n3            False  Bank transfer (automatic)          42.30       1840.75   \n4             True           Electronic check          70.70        151.65   \n\n   Churn  \n0  False  \n1  False  \n2   True  \n3  False  \n4   True  \n\n[5 rows x 21 columns]",
             "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>customerID</th>\n      <th>gender</th>\n      <th>SeniorCitizen</th>\n      <th>Partner</th>\n      <th>Dependents</th>\n      <th>tenure</th>\n      <th>PhoneService</th>\n      <th>MultipleLines</th>\n      <th>InternetService</th>\n      <th>OnlineSecurity</th>\n      <th>...</th>\n      <th>DeviceProtection</th>\n      <th>TechSupport</th>\n      <th>StreamingTV</th>\n      <th>StreamingMovies</th>\n      <th>Contract</th>\n      <th>PaperlessBilling</th>\n      <th>PaymentMethod</th>\n      <th>MonthlyCharges</th>\n      <th>TotalCharges</th>\n      <th>Churn</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>7590-VHVEG</td>\n      <td>Female</td>\n      <td>0</td>\n      <td>True</td>\n      <td>False</td>\n      <td>1</td>\n      <td>False</td>\n      <td>No phone service</td>\n      <td>DSL</td>\n      <td>No</td>\n      <td>...</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>Month-to-month</td>\n      <td>True</td>\n      <td>Electronic check</td>\n      <td>29.85</td>\n      <td>29.85</td>\n      <td>False</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>5575-GNVDE</td>\n      <td>Male</td>\n      <td>0</td>\n      <td>False</td>\n      <td>False</td>\n      <td>34</td>\n      <td>True</td>\n      <td>No</td>\n      <td>DSL</td>\n      <td>Yes</td>\n      <td>...</td>\n      <td>Yes</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>One year</td>\n      <td>False</td>\n      <td>Mailed check</td>\n      <td>56.95</td>\n      <td>1889.50</td>\n      <td>False</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>3668-QPYBK</td>\n      <td>Male</td>\n      <td>0</td>\n      <td>False</td>\n      <td>False</td>\n      <td>2</td>\n      <td>True</td>\n      <td>No</td>\n      <td>DSL</td>\n      <td>Yes</td>\n      <td>...</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>Month-to-month</td>\n      <td>True</td>\n      <td>Mailed check</td>\n      <td>53.85</td>\n      <td>108.15</td>\n      <td>True</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>7795-CFOCW</td>\n      <td>Male</td>\n      <td>0</td>\n      <td>False</td>\n      <td>False</td>\n      <td>45</td>\n      <td>False</td>\n      <td>No phone service</td>\n      <td>DSL</td>\n      <td>Yes</td>\n      <td>...</td>\n      <td>Yes</td>\n      <td>Yes</td>\n      <td>No</td>\n      <td>No</td>\n      <td>One year</td>\n      <td>False</td>\n      <td>Bank transfer (automatic)</td>\n      <td>42.30</td>\n      <td>1840.75</td>\n      <td>False</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>9237-HQITU</td>\n      <td>Female</td>\n      <td>0</td>\n      <td>False</td>\n      <td>False</td>\n      <td>2</td>\n      <td>True</td>\n      <td>No</td>\n      <td>Fiber optic</td>\n      <td>No</td>\n      <td>...</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>Month-to-month</td>\n      <td>True</td>\n      <td>Electronic check</td>\n      <td>70.70</td>\n      <td>151.65</td>\n      <td>True</td>\n    </tr>\n  </tbody>\n</table>\n<p>5 rows × 21 columns</p>\n</div>"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 3,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633961272068
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "The column customerID should be removed because they have unique values in the whole column() "
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df['customerID'].nunique() == df.shape[0]"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 18,
+          "data": {
+            "text/plain": "True"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 18,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633962623398
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df.drop('customerID', axis=1, inplace=True)\r\n",
+        "df.head()"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 19,
+          "data": {
+            "text/plain": "   gender  SeniorCitizen  Partner  Dependents  tenure  PhoneService  \\\n0  Female              0     True       False       1         False   \n1    Male              0    False       False      34          True   \n2    Male              0    False       False       2          True   \n3    Male              0    False       False      45         False   \n4  Female              0    False       False       2          True   \n\n      MultipleLines InternetService OnlineSecurity OnlineBackup  \\\n0  No phone service             DSL             No          Yes   \n1                No             DSL            Yes           No   \n2                No             DSL            Yes          Yes   \n3  No phone service             DSL            Yes           No   \n4                No     Fiber optic             No           No   \n\n  DeviceProtection TechSupport StreamingTV StreamingMovies        Contract  \\\n0               No          No          No              No  Month-to-month   \n1              Yes          No          No              No        One year   \n2               No          No          No              No  Month-to-month   \n3              Yes         Yes          No              No        One year   \n4               No          No          No              No  Month-to-month   \n\n   PaperlessBilling              PaymentMethod  MonthlyCharges  TotalCharges  \\\n0              True           Electronic check           29.85         29.85   \n1             False               Mailed check           56.95       1889.50   \n2              True               Mailed check           53.85        108.15   \n3             False  Bank transfer (automatic)           42.30       1840.75   \n4              True           Electronic check           70.70        151.65   \n\n   Churn  \n0  False  \n1  False  \n2   True  \n3  False  \n4   True  ",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>gender</th>\n      <th>SeniorCitizen</th>\n      <th>Partner</th>\n      <th>Dependents</th>\n      <th>tenure</th>\n      <th>PhoneService</th>\n      <th>MultipleLines</th>\n      <th>InternetService</th>\n      <th>OnlineSecurity</th>\n      <th>OnlineBackup</th>\n      <th>DeviceProtection</th>\n      <th>TechSupport</th>\n      <th>StreamingTV</th>\n      <th>StreamingMovies</th>\n      <th>Contract</th>\n      <th>PaperlessBilling</th>\n      <th>PaymentMethod</th>\n      <th>MonthlyCharges</th>\n      <th>TotalCharges</th>\n      <th>Churn</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>Female</td>\n      <td>0</td>\n      <td>True</td>\n      <td>False</td>\n      <td>1</td>\n      <td>False</td>\n      <td>No phone service</td>\n      <td>DSL</td>\n      <td>No</td>\n      <td>Yes</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>Month-to-month</td>\n      <td>True</td>\n      <td>Electronic check</td>\n      <td>29.85</td>\n      <td>29.85</td>\n      <td>False</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>Male</td>\n      <td>0</td>\n      <td>False</td>\n      <td>False</td>\n      <td>34</td>\n      <td>True</td>\n      <td>No</td>\n      <td>DSL</td>\n      <td>Yes</td>\n      <td>No</td>\n      <td>Yes</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>One year</td>\n      <td>False</td>\n      <td>Mailed check</td>\n      <td>56.95</td>\n      <td>1889.50</td>\n      <td>False</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>Male</td>\n      <td>0</td>\n      <td>False</td>\n      <td>False</td>\n      <td>2</td>\n      <td>True</td>\n      <td>No</td>\n      <td>DSL</td>\n      <td>Yes</td>\n      <td>Yes</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>Month-to-month</td>\n      <td>True</td>\n      <td>Mailed check</td>\n      <td>53.85</td>\n      <td>108.15</td>\n      <td>True</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>Male</td>\n      <td>0</td>\n      <td>False</td>\n      <td>False</td>\n      <td>45</td>\n      <td>False</td>\n      <td>No phone service</td>\n      <td>DSL</td>\n      <td>Yes</td>\n      <td>No</td>\n      <td>Yes</td>\n      <td>Yes</td>\n      <td>No</td>\n      <td>No</td>\n      <td>One year</td>\n      <td>False</td>\n      <td>Bank transfer (automatic)</td>\n      <td>42.30</td>\n      <td>1840.75</td>\n      <td>False</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>Female</td>\n      <td>0</td>\n      <td>False</td>\n      <td>False</td>\n      <td>2</td>\n      <td>True</td>\n      <td>No</td>\n      <td>Fiber optic</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>No</td>\n      <td>Month-to-month</td>\n      <td>True</td>\n      <td>Electronic check</td>\n      <td>70.70</td>\n      <td>151.65</td>\n      <td>True</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 19,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633962742135
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Check the data types present along the columns:"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "df.dtypes"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 4,
+          "data": {
+            "text/plain": "customerID           object\ngender               object\nSeniorCitizen         int64\nPartner                bool\nDependents             bool\ntenure                int64\nPhoneService           bool\nMultipleLines        object\nInternetService      object\nOnlineSecurity       object\nOnlineBackup         object\nDeviceProtection     object\nTechSupport          object\nStreamingTV          object\nStreamingMovies      object\nContract             object\nPaperlessBilling       bool\nPaymentMethod        object\nMonthlyCharges      float64\nTotalCharges        float64\nChurn                  bool\ndtype: object"
           },
           "metadata": {}
         }
@@ -226,26 +364,40 @@
           }
         },
         "gather": {
-          "logged": 1633913737515
+          "logged": 1633961275992
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Let's check the missing values:"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
         }
       }
     },
     {
       "cell_type": "code",
       "source": [
-        "df.dtypes"
+        "# check missing values\r\n",
+        "df.isnull().sum()"
       ],
       "outputs": [
         {
           "output_type": "execute_result",
-          "execution_count": 5,
+          "execution_count": 12,
           "data": {
-            "text/plain": "customerID           object\ngender               object\nSeniorCitizen         int64\nPartner                bool\nDependents             bool\ntenure                int64\nPhoneService           bool\nMultipleLines        object\nInternetService      object\nOnlineSecurity       object\nOnlineBackup         object\nDeviceProtection     object\nTechSupport          object\nStreamingTV          object\nStreamingMovies      object\nContract             object\nPaperlessBilling       bool\nPaymentMethod        object\nMonthlyCharges      float64\nTotalCharges        float64\nChurn                  bool\ndtype: object"
+            "text/plain": "customerID           0\ngender               0\nSeniorCitizen        0\nPartner              0\nDependents           0\ntenure               0\nPhoneService         0\nMultipleLines        0\nInternetService      0\nOnlineSecurity       0\nOnlineBackup         0\nDeviceProtection     0\nTechSupport          0\nStreamingTV          0\nStreamingMovies      0\nContract             0\nPaperlessBilling     0\nPaymentMethod        0\nMonthlyCharges       0\nTotalCharges        11\nChurn                0\ndtype: int64"
           },
           "metadata": {}
         }
       ],
-      "execution_count": 5,
+      "execution_count": 12,
       "metadata": {
         "jupyter": {
           "source_hidden": false,
@@ -257,26 +409,37 @@
           }
         },
         "gather": {
-          "logged": 1633913756707
+          "logged": 1633962090486
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Let's check the unique values of the float columns:"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
         }
       }
     },
     {
       "cell_type": "code",
       "source": [
-        "df['Churn'].value_counts()"
+        "float_columns = df.select_dtypes(include=['float64']).columns\r\n",
+        "print(float_columns)"
       ],
       "outputs": [
         {
-          "output_type": "execute_result",
-          "execution_count": 6,
-          "data": {
-            "text/plain": "False    5174\nTrue     1869\nName: Churn, dtype: int64"
-          },
-          "metadata": {}
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Index(['MonthlyCharges', 'TotalCharges'], dtype='object')\n"
         }
       ],
-      "execution_count": 6,
+      "execution_count": 30,
       "metadata": {
         "jupyter": {
           "source_hidden": false,
@@ -288,7 +451,350 @@
           }
         },
         "gather": {
-          "logged": 1633913914610
+          "logged": 1633964556744
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "for column in float_columns:\r\n",
+        "    print(df[column].value_counts())\r\n",
+        "    print('\\n')"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "20.05     61\n19.85     45\n19.95     44\n19.90     44\n20.00     43\n          ..\n114.75     1\n103.60     1\n113.40     1\n57.65      1\n113.30     1\nName: MonthlyCharges, Length: 1585, dtype: int64\n\n\n20.20      11\n19.75       9\n19.65       8\n20.05       8\n19.90       8\n           ..\n1066.15     1\n249.95      1\n8333.95     1\n7171.70     1\n1024.00     1\nName: TotalCharges, Length: 6530, dtype: int64\n\n\n"
+        }
+      ],
+      "execution_count": 31,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633964617276
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Let's check the unique values of the float columns:"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "bool_columns = df.select_dtypes(include=['bool']).columns\r\n",
+        "print(bool_columns)"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Index(['Partner', 'Dependents', 'PhoneService', 'PaperlessBilling', 'Churn'], dtype='object')\n"
+        }
+      ],
+      "execution_count": 32,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633964776552
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "for column in bool_columns:\r\n",
+        "    print(df[column].value_counts())\r\n",
+        "    print('\\n')"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "False    3641\nTrue     3402\nName: Partner, dtype: int64\n\n\nFalse    4933\nTrue     2110\nName: Dependents, dtype: int64\n\n\nTrue     6361\nFalse     682\nName: PhoneService, dtype: int64\n\n\nTrue     4171\nFalse    2872\nName: PaperlessBilling, dtype: int64\n\n\nFalse    5174\nTrue     1869\nName: Churn, dtype: int64\n\n\n"
+        }
+      ],
+      "execution_count": 33,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633964799428
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "5174/1864"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 34,
+          "data": {
+            "text/plain": "2.7757510729613735"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 34,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633964846222
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "The variable Churn is highly skewed toward False by a factor of 2.77"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "Let's check the unique values of the object columns:"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "object_columns = df.select_dtypes(include=['object']).columns\r\n",
+        "print(object_columns)"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Index(['gender', 'MultipleLines', 'InternetService', 'OnlineSecurity',\n       'OnlineBackup', 'DeviceProtection', 'TechSupport', 'StreamingTV',\n       'StreamingMovies', 'Contract', 'PaymentMethod'],\n      dtype='object')\n"
+        }
+      ],
+      "execution_count": 20,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633963570522
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "for column in object_columns:\r\n",
+        "    print(df[column].value_counts())\r\n",
+        "    print('\\n')"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Male      3555\nFemale    3488\nName: gender, dtype: int64\n\n\nNo                  3390\nYes                 2971\nNo phone service     682\nName: MultipleLines, dtype: int64\n\n\nFiber optic    3096\nDSL            2421\nNo             1526\nName: InternetService, dtype: int64\n\n\nNo                     3498\nYes                    2019\nNo internet service    1526\nName: OnlineSecurity, dtype: int64\n\n\nNo                     3088\nYes                    2429\nNo internet service    1526\nName: OnlineBackup, dtype: int64\n\n\nNo                     3095\nYes                    2422\nNo internet service    1526\nName: DeviceProtection, dtype: int64\n\n\nNo                     3473\nYes                    2044\nNo internet service    1526\nName: TechSupport, dtype: int64\n\n\nNo                     2810\nYes                    2707\nNo internet service    1526\nName: StreamingTV, dtype: int64\n\n\nNo                     2785\nYes                    2732\nNo internet service    1526\nName: StreamingMovies, dtype: int64\n\n\nMonth-to-month    3875\nTwo year          1695\nOne year          1473\nName: Contract, dtype: int64\n\n\nElectronic check             2365\nMailed check                 1612\nBank transfer (automatic)    1544\nCredit card (automatic)      1522\nName: PaymentMethod, dtype: int64\n\n\n"
+        }
+      ],
+      "execution_count": 29,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633964358096
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Train Test Splitting"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from sklearn.model_selection import train_test_split\r\n",
+        "from azureml.data.dataset_factory import TabularDatasetFactory\r\n",
+        "\r\n",
+        "churn = df['Churn']\r\n",
+        "\r\n",
+        "# Split data into train and test data taking into account the variable Churn is highly skewed:\r\n",
+        "train_dataset, test_dataset = train_test_split(df, test_size=0.2, stratify=churn, random_state=42)\r\n",
+        "\r\n",
+        "directory = 'train'\r\n",
+        "if not os.path.exists(directory):\r\n",
+        "    os.makedirs(directory)\r\n",
+        "    \r\n",
+        "directory = 'test'\r\n",
+        "if not os.path.exists(directory):\r\n",
+        "    os.makedirs(directory)\r\n",
+        "\r\n",
+        "# Export data as csv\r\n",
+        "train_dataset.to_csv(\"train/train_data.csv\", index=False)\r\n",
+        "test_dataset.to_csv(\"test/test_data.csv\", index=False)\r\n",
+        "\r\n",
+        "# Upload data to the datastore\r\n",
+        "datastore = ws.get_default_datastore()\r\n",
+        "datastore.upload(src_dir='./train', target_path = experiment_name)\r\n",
+        "datastore.upload(src_dir='./test', target_path = experiment_name)\r\n",
+        "\r\n",
+        "\r\n",
+        "train_dataset_azure = TabularDatasetFactory.from_delimited_files(path=datastore.path(\"customer-churn/train_data.csv\"))\r\n",
+        "test_dataset_azure = TabularDatasetFactory.from_delimited_files(path=datastore.path(\"customer-churn/test_data.csv\"))"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Uploading an estimated of 1 files\nUploading ./train/train_data.csv\nUploaded ./train/train_data.csv, 1 files out of an estimated total of 1\nUploaded 1 files\nUploading an estimated of 1 files\nUploading ./test/test_data.csv\nUploaded ./test/test_data.csv, 1 files out of an estimated total of 1\nUploaded 1 files\n"
+        },
+        {
+          "output_type": "error",
+          "ename": "DatasetValidationError",
+          "evalue": "DatasetValidationError:\n\tMessage: Cannot load any data from the specified path. Make sure the path is accessible and contains data.\nScriptExecutionException was caused by StreamAccessException.\n  StreamAccessException was caused by NotFoundException.\n    Found no resources for the input provided: '[REDACTED]'\n| session_id=90ac4249-5a93-4a6f-b51f-c2c7f34b74da\n\tInnerException None\n\tErrorResponse \n{\n    \"error\": {\n        \"code\": \"UserError\",\n        \"message\": \"Cannot load any data from the specified path. Make sure the path is accessible and contains data.\\nScriptExecutionException was caused by StreamAccessException.\\n  StreamAccessException was caused by NotFoundException.\\n    Found no resources for the input provided: '[REDACTED]'\\n| session_id=90ac4249-5a93-4a6f-b51f-c2c7f34b74da\"\n    }\n}",
+          "traceback": [
+            "\u001b[0;31m---------------------------------------------------------------------------\u001b[0m",
+            "\u001b[0;31mExecutionError\u001b[0m                            Traceback (most recent call last)",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/data/dataset_error_handling.py\u001b[0m in \u001b[0;36m_validate_has_data\u001b[0;34m(dataflow, error_message)\u001b[0m\n\u001b[1;32m     64\u001b[0m     \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 65\u001b[0;31m         \u001b[0mdataflow\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mverify_has_data\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     66\u001b[0m     except (dataprep().api.dataflow.DataflowValidationError,\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/dataprep/api/_loggerfactory.py\u001b[0m in \u001b[0;36mwrapper\u001b[0;34m(*args, **kwargs)\u001b[0m\n\u001b[1;32m    212\u001b[0m                 \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 213\u001b[0;31m                     \u001b[0;32mreturn\u001b[0m \u001b[0mfunc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    214\u001b[0m                 \u001b[0;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/dataprep/api/dataflow.py\u001b[0m in \u001b[0;36mverify_has_data\u001b[0;34m(self)\u001b[0m\n\u001b[1;32m    872\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 873\u001b[0;31m             \u001b[0;32mif\u001b[0m \u001b[0mlen\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtake\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;36m1\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_to_pyrecords\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m==\u001b[0m \u001b[0;36m0\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    874\u001b[0m                 \u001b[0;32mraise\u001b[0m \u001b[0mDataflowValidationError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"The Dataflow produced no records.\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/dataprep/api/dataflow.py\u001b[0m in \u001b[0;36m_to_pyrecords\u001b[0;34m(self)\u001b[0m\n\u001b[1;32m    792\u001b[0m                         \u001b[0manonymous_activity\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mDataflow\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_dataflow_to_anonymous_activity_data\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mdataflow_to_execute\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 793\u001b[0;31m                         \u001b[0mspan_context\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mto_dprep_span_context\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mspan\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mget_context\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mif\u001b[0m \u001b[0mspan\u001b[0m \u001b[0;32melse\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    794\u001b[0m                     ))\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/dataprep/api/_aml_helper.py\u001b[0m in \u001b[0;36mwrapper\u001b[0;34m(op_code, message, cancellation_token)\u001b[0m\n\u001b[1;32m     37\u001b[0m                 \u001b[0mengine_api_func\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mupdate_environment_variable\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mchanged\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 38\u001b[0;31m             \u001b[0;32mreturn\u001b[0m \u001b[0msend_message_func\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mop_code\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmessage\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcancellation_token\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     39\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/dataprep/api/engineapi/api.py\u001b[0m in \u001b[0;36mexecute_anonymous_activity\u001b[0;34m(self, message_args, cancellation_token)\u001b[0m\n\u001b[1;32m    161\u001b[0m     \u001b[0;32mdef\u001b[0m \u001b[0mexecute_anonymous_activity\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mself\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmessage_args\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mtypedefinitions\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mExecuteAnonymousActivityMessageArguments\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcancellation_token\u001b[0m\u001b[0;34m:\u001b[0m \u001b[0mCancellationToken\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;34m->\u001b[0m \u001b[0;32mNone\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 162\u001b[0;31m         \u001b[0mresponse\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mself\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m_message_channel\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0msend_message\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'Engine.ExecuteActivity'\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mmessage_args\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcancellation_token\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    163\u001b[0m         \u001b[0;32mreturn\u001b[0m \u001b[0mresponse\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/dataprep/api/engineapi/engine.py\u001b[0m in \u001b[0;36msend_message\u001b[0;34m(self, op_code, message, cancellation_token)\u001b[0m\n\u001b[1;32m    290\u001b[0m             \u001b[0mcancel_on_error\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 291\u001b[0;31m             \u001b[0mraise_engine_error\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mresponse\u001b[0m\u001b[0;34m[\u001b[0m\u001b[0;34m'error'\u001b[0m\u001b[0;34m]\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    292\u001b[0m         \u001b[0;32melse\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/dataprep/api/errorhandlers.py\u001b[0m in \u001b[0;36mraise_engine_error\u001b[0;34m(error_response)\u001b[0m\n\u001b[1;32m      9\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0;34m'ScriptExecution'\u001b[0m \u001b[0;32min\u001b[0m \u001b[0merror_code\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 10\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mExecutionError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0merror_response\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     11\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0;34m'Validation'\u001b[0m \u001b[0;32min\u001b[0m \u001b[0merror_code\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mExecutionError\u001b[0m: \nError Code: ScriptExecution.StreamAccess.NotFound\nFailed Step: c2ed730f-78be-4b8a-ad56-831126d9fa12\nError Message: ScriptExecutionException was caused by StreamAccessException.\n  StreamAccessException was caused by NotFoundException.\n    Found no resources for the input provided: 'https://mlstrg160731.blob.core.windows.net/azureml-blobstore-43c7ff29-3cdd-42ce-a202-0b9aa07463d5/customer-churn/train_data.csv'\n| session_id=90ac4249-5a93-4a6f-b51f-c2c7f34b74da",
+            "\nDuring handling of the above exception, another exception occurred:\n",
+            "\u001b[0;31mDatasetValidationError\u001b[0m                    Traceback (most recent call last)",
+            "\u001b[0;32m<ipython-input-35-bea0512d983b>\u001b[0m in \u001b[0;36m<module>\u001b[0;34m\u001b[0m\n\u001b[1;32m     25\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     26\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m---> 27\u001b[0;31m \u001b[0mtrain_dataset_azure\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mTabularDatasetFactory\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfrom_delimited_files\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mpath\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mdatastore\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mpath\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"customer-churn/train_data.csv\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     28\u001b[0m \u001b[0mtest_dataset_azure\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mTabularDatasetFactory\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mfrom_delimited_files\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mpath\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0mdatastore\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mpath\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m\"customer-churn/test_data.csv\"\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/data/_loggerfactory.py\u001b[0m in \u001b[0;36mwrapper\u001b[0;34m(*args, **kwargs)\u001b[0m\n\u001b[1;32m    127\u001b[0m             \u001b[0;32mwith\u001b[0m \u001b[0m_LoggerFactory\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mtrack_activity\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mlogger\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mfunc\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0m__name__\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mactivity_type\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mcustom_dimensions\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0mal\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    128\u001b[0m                 \u001b[0;32mtry\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 129\u001b[0;31m                     \u001b[0;32mreturn\u001b[0m \u001b[0mfunc\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m*\u001b[0m\u001b[0margs\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m**\u001b[0m\u001b[0mkwargs\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m    130\u001b[0m                 \u001b[0;32mexcept\u001b[0m \u001b[0mException\u001b[0m \u001b[0;32mas\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    131\u001b[0m                     \u001b[0;32mif\u001b[0m \u001b[0mhasattr\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0mal\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'activity_info'\u001b[0m\u001b[0;34m)\u001b[0m \u001b[0;32mand\u001b[0m \u001b[0mhasattr\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0me\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0;34m'error_code'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/data/dataset_factory.py\u001b[0m in \u001b[0;36mfrom_delimited_files\u001b[0;34m(path, validate, include_path, infer_column_types, set_column_types, separator, header, partition_format, support_multi_line, empty_as_string, encoding)\u001b[0m\n\u001b[1;32m    367\u001b[0m             \u001b[0mdataflow\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mpartition_format\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0minclude_path\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    368\u001b[0m             \u001b[0mvalidate\u001b[0m\u001b[0;34m,\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m--> 369\u001b[0;31m             infer_column_types or _is_inference_required(set_column_types))\n\u001b[0m\u001b[1;32m    370\u001b[0m         \u001b[0;32mif\u001b[0m \u001b[0minfer_column_types\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m    371\u001b[0m             \u001b[0mcolumn_types_builder\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mdataflow\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mbuilders\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mset_column_types\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/data/dataset_factory.py\u001b[0m in \u001b[0;36m_transform_and_validate\u001b[0;34m(dataflow, partition_format, include_path, validate, infer_column_types)\u001b[0m\n\u001b[1;32m   1167\u001b[0m         \u001b[0mdataflow\u001b[0m \u001b[0;34m=\u001b[0m \u001b[0mdataflow\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mdrop_columns\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0;34m'Path'\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m   1168\u001b[0m     \u001b[0;32mif\u001b[0m \u001b[0mvalidate\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0;32m-> 1169\u001b[0;31m         _validate_has_data(dataflow, 'Cannot load any data from the specified path. '\n\u001b[0m\u001b[1;32m   1170\u001b[0m                                      'Make sure the path is accessible and contains data.')\n\u001b[1;32m   1171\u001b[0m     \u001b[0;32melif\u001b[0m \u001b[0minfer_column_types\u001b[0m\u001b[0;34m:\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;32m/anaconda/envs/azureml_py36/lib/python3.6/site-packages/azureml/data/dataset_error_handling.py\u001b[0m in \u001b[0;36m_validate_has_data\u001b[0;34m(dataflow, error_message)\u001b[0m\n\u001b[1;32m     66\u001b[0m     except (dataprep().api.dataflow.DataflowValidationError,\n\u001b[1;32m     67\u001b[0m             dataprep().api.errorhandlers.ExecutionError) as e:\n\u001b[0;32m---> 68\u001b[0;31m         \u001b[0;32mraise\u001b[0m \u001b[0mDatasetValidationError\u001b[0m\u001b[0;34m(\u001b[0m\u001b[0merror_message\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0;34m'\\n'\u001b[0m \u001b[0;34m+\u001b[0m \u001b[0me\u001b[0m\u001b[0;34m.\u001b[0m\u001b[0mcompliant_message\u001b[0m\u001b[0;34m,\u001b[0m \u001b[0mexception\u001b[0m\u001b[0;34m=\u001b[0m\u001b[0me\u001b[0m\u001b[0;34m)\u001b[0m\u001b[0;34m\u001b[0m\u001b[0;34m\u001b[0m\u001b[0m\n\u001b[0m\u001b[1;32m     69\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n\u001b[1;32m     70\u001b[0m \u001b[0;34m\u001b[0m\u001b[0m\n",
+            "\u001b[0;31mDatasetValidationError\u001b[0m: DatasetValidationError:\n\tMessage: Cannot load any data from the specified path. Make sure the path is accessible and contains data.\nScriptExecutionException was caused by StreamAccessException.\n  StreamAccessException was caused by NotFoundException.\n    Found no resources for the input provided: '[REDACTED]'\n| session_id=90ac4249-5a93-4a6f-b51f-c2c7f34b74da\n\tInnerException None\n\tErrorResponse \n{\n    \"error\": {\n        \"code\": \"UserError\",\n        \"message\": \"Cannot load any data from the specified path. Make sure the path is accessible and contains data.\\nScriptExecutionException was caused by StreamAccessException.\\n  StreamAccessException was caused by NotFoundException.\\n    Found no resources for the input provided: '[REDACTED]'\\n| session_id=90ac4249-5a93-4a6f-b51f-c2c7f34b74da\"\n    }\n}"
+          ]
+        }
+      ],
+      "execution_count": 35,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633964239263
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "test_dataset.shape"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 28,
+          "data": {
+            "text/plain": "(1409, 20)"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 28,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1633964271359
         }
       }
     },
