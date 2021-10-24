@@ -2,6 +2,7 @@
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
+from sklearn.impute import SimpleImputer
 import argparse
 import os
 import numpy as np
@@ -16,58 +17,63 @@ from azureml.data.dataset_factory import TabularDatasetFactory
 
 
 def clean_data(df):
-    
-    # replace blanks with np.nan
-    df['TotalCharges'] = df['TotalCharges'].replace(' ', np.nan)
-    # convert to float64
-    df['TotalCharges'] = df['TotalCharges'].astype('float64')
-    
+    df.drop('customerID', axis=1, inplace=True)
     # Replace binary values
-    df['gender'] = df['gender'].apply(lambda s: 1 if s == "Female" else 0)
-    df['Partner'] = df['Partner'].apply(lambda s: 1 if s == "Yes" else 0)
-    df['Dependents'] = df['Dependents'].apply(lambda s: 1 if s == "Yes" else 0)
-    df['PhoneService'] = df['PhoneService'].apply(lambda s: 1 if s == "Yes" else 0)
-    df['PaperlessBilling'] = df['PaperlessBilling'].apply(lambda s: 1 if s == "Yes" else 0)
-    df['Churn'] = df['Churn'].apply(lambda s: 1 if s == "Yes" else 0)
+    df["gender"] = df["gender"].apply(lambda s: 1 if s == "Female" else 0)
+    df["Partner"] = df["Partner"].apply(lambda s: 1 if s == "Yes" else 0)
+    df["Dependents"] = df["Dependents"].apply(lambda s: 1 if s == "Yes" else 0)
+    df["PhoneService"] = df["PhoneService"].apply(lambda s: 1 if s == "Yes" else 0)
+    df["PaperlessBilling"] = df["PaperlessBilling"].apply(
+        lambda s: 1 if s == "Yes" else 0
+    )
+    df["Churn"] = df["Churn"].apply(lambda s: 1 if s == "Yes" else 0)
 
-    MultipleLines = pd.get_dummies(df['MultipleLines'], prefix="MultipleLines")
+    MultipleLines = pd.get_dummies(df["MultipleLines"], prefix="MultipleLines")
     df.drop("MultipleLines", inplace=True, axis=1)
     df = df.join(MultipleLines)
-    InternetService = pd.get_dummies(df['InternetService'], prefix="InternetService")
+    InternetService = pd.get_dummies(df["InternetService"], prefix="InternetService")
     df.drop("InternetService", inplace=True, axis=1)
     df = df.join(InternetService)
-    OnlineSecurity = pd.get_dummies(df['OnlineSecurity'], prefix="OnlineSecurity")
+    OnlineSecurity = pd.get_dummies(df["OnlineSecurity"], prefix="OnlineSecurity")
     df.drop("OnlineSecurity", inplace=True, axis=1)
     df = df.join(OnlineSecurity)
-    OnlineBackup = pd.get_dummies(df['OnlineBackup'], prefix="OnlineBackup")
+    OnlineBackup = pd.get_dummies(df["OnlineBackup"], prefix="OnlineBackup")
     df.drop("OnlineBackup", inplace=True, axis=1)
     df = df.join(OnlineBackup)
-    DeviceProtection = pd.get_dummies(df['DeviceProtection'], prefix="DeviceProtection")
+    DeviceProtection = pd.get_dummies(df["DeviceProtection"], prefix="DeviceProtection")
     df.drop("DeviceProtection", inplace=True, axis=1)
     df = df.join(DeviceProtection)
-    TechSupport = pd.get_dummies(df['TechSupport'], prefix="TechSupport")
+    TechSupport = pd.get_dummies(df["TechSupport"], prefix="TechSupport")
     df.drop("TechSupport", inplace=True, axis=1)
     df = df.join(TechSupport)
-    StreamingTV = pd.get_dummies(df['StreamingTV'], prefix="StreamingTV")
+    StreamingTV = pd.get_dummies(df["StreamingTV"], prefix="StreamingTV")
     df.drop("StreamingTV", inplace=True, axis=1)
     df = df.join(StreamingTV)
-    StreamingMovies = pd.get_dummies(df['StreamingMovies'], prefix="StreamingMovies")
+    StreamingMovies = pd.get_dummies(df["StreamingMovies"], prefix="StreamingMovies")
     df.drop("StreamingMovies", inplace=True, axis=1)
     df = df.join(StreamingMovies)
-    Contract = pd.get_dummies(df['Contract'], prefix="Contract")
+    Contract = pd.get_dummies(df["Contract"], prefix="Contract")
     df.drop("Contract", inplace=True, axis=1)
     df = df.join(Contract)
-    PaymentMethod = pd.get_dummies(df['PaymentMethod'], prefix="PaymentMethod")
+    PaymentMethod = pd.get_dummies(df["PaymentMethod"], prefix="PaymentMethod")
     df.drop("PaymentMethod", inplace=True, axis=1)
     df = df.join(PaymentMethod)
-    y_df = df.pop('Churn')
+    y_df = df.pop("Churn")
+    # x_df = df.drop("Churn", inplace=True, axis=1)
 
     return df, y_df
 
+df= pd.read_csv("https://raw.githubusercontent.com/srees1988/predict-churn-py/main/customer_churn_data.csv")
 
-ds= pd.read_csv("https://raw.githubusercontent.com/srees1988/predict-churn-py/main/customer_churn_data.csv")
 
-x, y = clean_data(ds)
+# replace blanks with np.nan
+df["TotalCharges"] = df["TotalCharges"].replace(" ", np.nan)
+# convert to float64
+df["TotalCharges"] = df["TotalCharges"].astype("float64")
+imputer = SimpleImputer(missing_values=np.nan, strategy='median')
+df['TotalCharges'] = imputer.fit(df['TotalCharges'].values.reshape(-1,1))
+
+x, y = clean_data(df)
 
 # TODO: Split data into train and test sets.
 
