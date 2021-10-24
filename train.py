@@ -1,4 +1,4 @@
-# -*- coding: utf-8 -*-
+.reshape(1, -1)# -*- coding: utf-8 -*-
 
 from sklearn.linear_model import LogisticRegression
 from sklearn.ensemble import RandomForestClassifier
@@ -70,8 +70,9 @@ df= pd.read_csv("https://raw.githubusercontent.com/srees1988/predict-churn-py/ma
 df["TotalCharges"] = df["TotalCharges"].replace(" ", np.nan)
 # convert to float64
 df["TotalCharges"] = df["TotalCharges"].astype("float64")
-imputer = SimpleImputer(missing_values=np.nan, strategy='median')
-df['TotalCharges'] = imputer.fit(df['TotalCharges'].values.reshape(-1,1))
+
+imputer = SimpleImputer(strategy='median')
+df['TotalCharges'] = imputer.fit_transform(df['TotalCharges']).reshape(1, -1)
 
 x, y = clean_data(df)
 
