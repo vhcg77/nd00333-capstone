@@ -695,7 +695,7 @@
         "\r\n",
         "### YOUR CODE HERE ###\r\n",
         "\r\n",
-        "cluster_name = \"cluster-vhcg77\"\r\n",
+        "cluster_name = \"cluster-vhcg\"\r\n",
         "# verify that the cluster does not exist already\r\n",
         "try:\r\n",
         "    cpu_cluster = ComputeTarget(workspace=ws, name = cluster_name)\r\n",

@@ -1,0 +1,533 @@
+{
+  "cells": [
+    {
+      "cell_type": "markdown",
+      "source": [
+        "# Hyperparameter Tuning using HyperDrive\n",
+        "\n",
+        "TODO: Import Dependencies. In the cell below, import all the dependencies that you will need to complete the project."
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from azureml.core import Workspace, Experiment\n",
+        "from azureml.widgets import RunDetails\n",
+        "from azureml.train.sklearn import SKLearn\n",
+        "from azureml.train.hyperdrive.run import PrimaryMetricGoal\n",
+        "from azureml.train.hyperdrive.policy import BanditPolicy\n",
+        "from azureml.train.hyperdrive.sampling import RandomParameterSampling\n",
+        "from azureml.train.hyperdrive.runconfig import HyperDriveConfig\n",
+        "from azureml.train.hyperdrive.parameter_expressions import uniform, choice\n",
+        "from azureml.train.hyperdrive.parameter_expressions import choice, loguniform, uniform\n",
+        "from azureml.core.dataset import Dataset\n",
+        "import os\n"
+      ],
+      "outputs": [],
+      "execution_count": 1,
+      "metadata": {
+        "gather": {
+          "logged": 1635293520661
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Dataset\n",
+        "\n",
+        "TODO: Get data. In the cell below, write code to access the data you will be using in this project. Remember that the dataset needs to be external.\n",
+        "\n",
+        "This dataset contains numerical input variables that come from and PCA algorithm. Due to confidential concerns, the original variables are not available. Features V1, V2, ..., V8 are the outputs of the principal components from the PCA algorithm. The time and amount are the variables that are not transformed by PCA. The target variable is the feature 'Class' and it takes values 1 in case of fraud and 0 otherwise.\n",
+        "\n",
+        "\n",
+        "This dataset contains transations made by credit cards in September 2012 by European cardholders. This dataset contains 492 frauds out of 284807 transations, and it is highly unbalanced, the positive class (fraud) account for 0.172% of all the transations.\n"
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "ws = Workspace.from_config()\n",
+        "\n",
+        "# choose a name for experiment\n",
+        "experiment_name = 'telco-customer-churn'\n",
+        "experiment=Experiment(ws, experiment_name)\n",
+        "\n",
+        "# Try to load the dataset from the Workspace. Otherwise, create it from the file\n",
+        "# NOTE: update the key to match the dataset name\n",
+        "found = False\n",
+        "key = \"Customer Churn\"\n",
+        "description_text = \"Customer Churn DataSet for Udacity Capstone Project\"\n",
+        "\n",
+        "if key in ws.datasets.keys(): \n",
+        "        found = True\n",
+        "        dataset = ws.datasets[key] \n",
+        "\n",
+        "if not found:\n",
+        "        # Create AML Dataset and register it into Workspace\n",
+        "        example_data = 'https://raw.githubusercontent.com/srees1988/predict-churn-py/main/customer_churn_data.csv'\n",
+        "        dataset = Dataset.Tabular.from_delimited_files(example_data)        \n",
+        "        #Register Dataset in Workspace\n",
+        "        dataset = dataset.register(workspace=ws,\n",
+        "                                   name=key,\n",
+        "                                   description=description_text)\n",
+        "\n",
+        "\n",
+        "df = dataset.to_pandas_dataframe()\n",
+        "df.describe()"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 2,
+          "data": {
+            "text/plain": "       SeniorCitizen       tenure  MonthlyCharges  TotalCharges\ncount    7043.000000  7043.000000     7043.000000   7032.000000\nmean        0.162147    32.371149       64.761692   2283.300441\nstd         0.368612    24.559481       30.090047   2266.771362\nmin         0.000000     0.000000       18.250000     18.800000\n25%         0.000000     9.000000       35.500000    401.450000\n50%         0.000000    29.000000       70.350000   1397.475000\n75%         0.000000    55.000000       89.850000   3794.737500\nmax         1.000000    72.000000      118.750000   8684.800000",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>SeniorCitizen</th>\n      <th>tenure</th>\n      <th>MonthlyCharges</th>\n      <th>TotalCharges</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>count</th>\n      <td>7043.000000</td>\n      <td>7043.000000</td>\n      <td>7043.000000</td>\n      <td>7032.000000</td>\n    </tr>\n    <tr>\n      <th>mean</th>\n      <td>0.162147</td>\n      <td>32.371149</td>\n      <td>64.761692</td>\n      <td>2283.300441</td>\n    </tr>\n    <tr>\n      <th>std</th>\n      <td>0.368612</td>\n      <td>24.559481</td>\n      <td>30.090047</td>\n      <td>2266.771362</td>\n    </tr>\n    <tr>\n      <th>min</th>\n      <td>0.000000</td>\n      <td>0.000000</td>\n      <td>18.250000</td>\n      <td>18.800000</td>\n    </tr>\n    <tr>\n      <th>25%</th>\n      <td>0.000000</td>\n      <td>9.000000</td>\n      <td>35.500000</td>\n      <td>401.450000</td>\n    </tr>\n    <tr>\n      <th>50%</th>\n      <td>0.000000</td>\n      <td>29.000000</td>\n      <td>70.350000</td>\n      <td>1397.475000</td>\n    </tr>\n    <tr>\n      <th>75%</th>\n      <td>0.000000</td>\n      <td>55.000000</td>\n      <td>89.850000</td>\n      <td>3794.737500</td>\n    </tr>\n    <tr>\n      <th>max</th>\n      <td>1.000000</td>\n      <td>72.000000</td>\n      <td>118.750000</td>\n      <td>8684.800000</td>\n    </tr>\n  </tbody>\n</table>\n</div>"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 2,
+      "metadata": {
+        "gather": {
+          "logged": 1635293525563
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Cluster Provisioning"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from azureml.core.compute import ComputeTarget, AmlCompute\r\n",
+        "from azureml.core.compute_target import ComputeTargetException\r\n",
+        "\r\n",
+        "# TODO: Create compute cluster\r\n",
+        "# Use vm_size = \"Standard_D2_V2\" in your provisioning configuration.\r\n",
+        "# max_nodes should be no greater than 4.\r\n",
+        "\r\n",
+        "\r\n",
+        "cluster_name = \"cluster-vhcg\"\r\n",
+        "# verify that the cluster does not exist already\r\n",
+        "try:\r\n",
+        "    cpu_cluster = ComputeTarget(workspace=ws, name = cluster_name)\r\n",
+        "    print('Found existing cluster, use it.')\r\n",
+        "except ComputeTargetException:\r\n",
+        "    compute_config = AmlCompute.provisioning_configuration(vm_size='Standard_D2_V2', max_nodes = 4, idle_seconds_before_scaledown=120)\r\n",
+        "    cpu_cluster = ComputeTarget.create(ws, cluster_name, compute_config)\r\n",
+        "\r\n",
+        "cpu_cluster.wait_for_completion(show_output=True)"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Found existing cluster, use it.\nSucceeded\nAmlCompute wait for completion finished\n\nMinimum number of nodes requested have been provisioned\n"
+        }
+      ],
+      "execution_count": 3,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1635293525893
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Hyperdrive Configuration\n",
+        "\n",
+        "TODO: Explain the model you are using and the reason for chosing the different hyperparameters, termination policy and config settings."
+      ],
+      "metadata": {
+        "collapsed": true,
+        "gather": {
+          "logged": 1598531923519
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from azureml.widgets import RunDetails\n",
+        "from azureml.train.sklearn import SKLearn\n",
+        "from azureml.train.hyperdrive.run import PrimaryMetricGoal\n",
+        "from azureml.train.hyperdrive.policy import BanditPolicy\n",
+        "from azureml.train.hyperdrive.sampling import RandomParameterSampling\n",
+        "from azureml.train.hyperdrive.runconfig import HyperDriveConfig\n",
+        "from azureml.train.hyperdrive.parameter_expressions import uniform, choice, quniform\n",
+        "import os\n",
+        "\n",
+        "# Specify parameter sampler\n",
+        "ps = RandomParameterSampling({\n",
+        "    '--n_estimators': choice(10, 100, 200, 500, 700, 1000, 1500, 2000),\n",
+        "    '--max_features': uniform(0.5, 1.0),\n",
+        "    '--max_depth': choice(10, 20, 30, 40, 50, 60, 70, 80, 90, 100),\n",
+        "    '--min_samples_split': uniform(0.0001, 1.0),\n",
+        "    '--min_samples_leaf': uniform(0.00001, 0.5),\n",
+        "    # '--bootstrap': choice(True, False),\n",
+        "})\n",
+        "\n",
+        "# Specify a Policy\n",
+        "policy = BanditPolicy(slack_factor=0.1, evaluation_interval=2, delay_evaluation=10)\n",
+        "\n",
+        "if \"training\" not in os.listdir():\n",
+        "    os.mkdir(\"./training\")\n",
+        "\n",
+        "# Create a SKLearn estimator for use with train.py\n",
+        "est = SKLearn(source_directory='./', compute_target=cpu_cluster, entry_script='train_forest.py')\n",
+        "\n",
+        "# Create a HyperDriveConfig using the estimator, hyperparameter sampler, and policy.\n",
+        "hyperdrive_config = HyperDriveConfig( hyperparameter_sampling=ps, \n",
+        "                                        primary_metric_name='Accuracy', \n",
+        "                                        primary_metric_goal=PrimaryMetricGoal.MAXIMIZE, \n",
+        "                                        max_total_runs=100, \n",
+        "                                        max_concurrent_runs=4, \n",
+        "                                        max_duration_minutes=10080, \n",
+        "                                        policy=policy, \n",
+        "                                        estimator=est)"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": "WARNING:azureml.train.sklearn:'SKLearn' estimator is deprecated. Please use 'ScriptRunConfig' from 'azureml.core.script_run_config' with your own defined environment or the AzureML-Tutorial curated environment.\nWARNING:azureml.core.environment:'enabled' is deprecated. Please use the azureml.core.runconfig.DockerConfiguration object with the 'use_docker' param instead.\n"
+        }
+      ],
+      "execution_count": 57,
+      "metadata": {
+        "gather": {
+          "logged": 1635299163179
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#TODO: Submit your experiment\n",
+        "\n",
+        "hyperdrive_run = experiment.submit(hyperdrive_config)\n"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stderr",
+          "text": "WARNING:root:If 'script' has been provided here and a script file name has been specified in 'run_config', 'script' provided in ScriptRunConfig initialization will take precedence.\n"
+        }
+      ],
+      "execution_count": 58,
+      "metadata": {
+        "gather": {
+          "logged": 1635299172641
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Run Details\n",
+        "\n",
+        "OPTIONAL: Write about the different models trained and their performance. Why do you think some models did better than others?\n",
+        "\n",
+        "TODO: In the cell below, use the `RunDetails` widget to show the different experiments."
+      ],
+      "metadata": {
+        "collapsed": true,
+        "gather": {
+          "logged": 1598544898497
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "RunDetails(hyperdrive_run).show()\n",
+        "hyperdrive_run.wait_for_completion()"
+      ],
+      "outputs": [
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "_HyperDriveWidget(widget_settings={'childWidgetDisplay': 'popup', 'send_telemetry': False, 'log_level': 'INFO'…",
+            "application/vnd.jupyter.widget-view+json": {
+              "version_major": 2,
+              "version_minor": 0,
+              "model_id": "232ba3f2bb784102850d16c92da27af5"
+            }
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "application/aml.mini.widget.v1": "{\"status\": \"Running\", \"workbench_run_details_uri\": \"https://ml.azure.com/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9?wsid=/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourcegroups/aml-quickstarts-162142/workspaces/quick-starts-ws-162142&tid=660b3398-b80e-49d2-bc5b-ac1dc93b5254\", \"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"run_properties\": {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"created_utc\": \"2021-10-27T01:46:11.926033Z\", \"properties\": {\"primary_metric_config\": \"{\\\"name\\\": \\\"Accuracy\\\", \\\"goal\\\": \\\"maximize\\\"}\", \"resume_from\": \"null\", \"runTemplate\": \"HyperDrive\", \"azureml.runsource\": \"hyperdrive\", \"platform\": \"AML\", \"ContentSnapshotId\": \"e8fae36b-057e-41e7-876f-41f135f5e19e\", \"user_agent\": \"python/3.6.9 (Linux-5.4.0-1056-azure-x86_64-with-debian-buster-sid) msrest/0.6.21 Hyperdrive.Service/1.0.0 Hyperdrive.SDK/core.1.34.0\"}, \"tags\": {\"_aml_system_max_concurrent_jobs\": \"4\", \"max_concurrent_jobs\": \"4\", \"_aml_system_max_total_jobs\": \"100\", \"max_total_jobs\": \"100\", \"_aml_system_max_duration_minutes\": \"10080\", \"max_duration_minutes\": \"10080\", \"_aml_system_policy_config\": \"{\\\"name\\\": \\\"BANDIT\\\", \\\"properties\\\": {\\\"evaluation_interval\\\": 2, \\\"delay_evaluation\\\": 10, \\\"slack_factor\\\": 0.1}}\", \"policy_config\": \"{\\\"name\\\": \\\"BANDIT\\\", \\\"properties\\\": {\\\"evaluation_interval\\\": 2, \\\"delay_evaluation\\\": 10, \\\"slack_factor\\\": 0.1}}\", \"_aml_system_generator_config\": \"{\\\"name\\\": \\\"RANDOM\\\", \\\"parameter_space\\\": {\\\"--n_estimators\\\": [\\\"choice\\\", [[10, 100, 200, 500, 700, 1000, 1500, 2000]]], \\\"--max_features\\\": [\\\"uniform\\\", [0.5, 1.0]], \\\"--max_depth\\\": [\\\"choice\\\", [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]]], \\\"--min_samples_split\\\": [\\\"uniform\\\", [0.0001, 1.0]], \\\"--min_samples_leaf\\\": [\\\"uniform\\\", [1e-05, 0.5]]}}\", \"generator_config\": \"{\\\"name\\\": \\\"RANDOM\\\", \\\"parameter_space\\\": {\\\"--n_estimators\\\": [\\\"choice\\\", [[10, 100, 200, 500, 700, 1000, 1500, 2000]]], \\\"--max_features\\\": [\\\"uniform\\\", [0.5, 1.0]], \\\"--max_depth\\\": [\\\"choice\\\", [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]]], \\\"--min_samples_split\\\": [\\\"uniform\\\", [0.0001, 1.0]], \\\"--min_samples_leaf\\\": [\\\"uniform\\\", [1e-05, 0.5]]}}\", \"_aml_system_primary_metric_config\": \"{\\\"name\\\": \\\"Accuracy\\\", \\\"goal\\\": \\\"maximize\\\"}\", \"primary_metric_config\": \"{\\\"name\\\": \\\"Accuracy\\\", \\\"goal\\\": \\\"maximize\\\"}\", \"_aml_system_platform_config\": \"{\\\"ServiceAddress\\\": \\\"https://southcentralus.experiments.azureml.net\\\", \\\"ServiceArmScope\\\": \\\"subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/telco-customer-churn\\\", \\\"SubscriptionId\\\": \\\"610d6e37-4747-4a20-80eb-3aad70a55f43\\\", \\\"ResourceGroupName\\\": \\\"aml-quickstarts-162142\\\", \\\"WorkspaceName\\\": \\\"quick-starts-ws-162142\\\", \\\"ExperimentName\\\": \\\"telco-customer-churn\\\", \\\"Definition\\\": {\\\"Overrides\\\": {\\\"script\\\": \\\"train_forest.py\\\", \\\"arguments\\\": [], \\\"target\\\": \\\"cluster-vhcg\\\", \\\"framework\\\": \\\"Python\\\", \\\"communicator\\\": \\\"None\\\", \\\"maxRunDurationSeconds\\\": null, \\\"nodeCount\\\": 1, \\\"priority\\\": null, \\\"environment\\\": {\\\"name\\\": null, \\\"version\\\": null, \\\"environmentVariables\\\": {\\\"EXAMPLE_ENV_VAR\\\": \\\"EXAMPLE_VALUE\\\"}, \\\"python\\\": {\\\"userManagedDependencies\\\": true, \\\"interpreterPath\\\": \\\"python\\\", \\\"condaDependenciesFile\\\": null, \\\"baseCondaEnvironment\\\": null, \\\"condaDependencies\\\": {\\\"name\\\": \\\"project_environment\\\", \\\"dependencies\\\": [\\\"python=3.6.2\\\", {\\\"pip\\\": [\\\"azureml-defaults\\\"]}], \\\"channels\\\": [\\\"anaconda\\\", \\\"conda-forge\\\"]}}, \\\"docker\\\": {\\\"enabled\\\": true, \\\"baseImage\\\": \\\"sklearn:0.20.3-cpu\\\", \\\"baseDockerfile\\\": null, \\\"sharedVolumes\\\": true, \\\"shmSize\\\": \\\"2g\\\", \\\"arguments\\\": [], \\\"baseImageRegistry\\\": {\\\"address\\\": \\\"viennaprivate.azurecr.io\\\", \\\"username\\\": null, \\\"password\\\": null, \\\"registryIdentity\\\": null}, \\\"platform\\\": {\\\"os\\\": \\\"Linux\\\", \\\"architecture\\\": \\\"amd64\\\"}}, \\\"spark\\\": {\\\"repositories\\\": [], \\\"packages\\\": [], \\\"precachePackages\\\": false}, \\\"databricks\\\": {\\\"mavenLibraries\\\": [], \\\"pypiLibraries\\\": [], \\\"rcranLibraries\\\": [], \\\"jarLibraries\\\": [], \\\"eggLibraries\\\": []}, \\\"r\\\": null, \\\"inferencingStackVersion\\\": null}, \\\"history\\\": {\\\"outputCollection\\\": true, \\\"snapshotProject\\\": true, \\\"directoriesToWatch\\\": [\\\"logs\\\"]}, \\\"spark\\\": {\\\"configuration\\\": {\\\"spark.app.name\\\": \\\"Azure ML Experiment\\\", \\\"spark.yarn.maxAppAttempts\\\": 1}}, \\\"docker\\\": {\\\"useDocker\\\": false, \\\"sharedVolumes\\\": true, \\\"arguments\\\": [], \\\"shmSize\\\": \\\"2g\\\"}, \\\"hdi\\\": {\\\"yarnDeployMode\\\": \\\"cluster\\\"}, \\\"tensorflow\\\": {\\\"workerCount\\\": 1, \\\"parameterServerCount\\\": 1}, \\\"mpi\\\": {\\\"processCountPerNode\\\": 1, \\\"nodeCount\\\": 1}, \\\"pytorch\\\": {\\\"communicationBackend\\\": \\\"nccl\\\", \\\"processCount\\\": null, \\\"nodeCount\\\": 1}, \\\"paralleltask\\\": {\\\"maxRetriesPerWorker\\\": 0, \\\"workerCountPerNode\\\": 1, \\\"terminalExitCodes\\\": null}, \\\"dataReferences\\\": {}, \\\"data\\\": {}, \\\"outputData\\\": {}, \\\"sourceDirectoryDataStore\\\": null, \\\"amlcompute\\\": {\\\"vmSize\\\": null, \\\"vmPriority\\\": null, \\\"retainCluster\\\": false, \\\"name\\\": null, \\\"clusterMaxNodeCount\\\": 1}, \\\"credentialPassthrough\\\": false, \\\"command\\\": \\\"\\\", \\\"environmentVariables\\\": {}, \\\"applicationEndpoints\\\": {}}, \\\"TargetDetails\\\": null, \\\"SnapshotId\\\": \\\"e8fae36b-057e-41e7-876f-41f135f5e19e\\\", \\\"TelemetryValues\\\": {\\\"amlClientType\\\": \\\"azureml-sdk-train\\\", \\\"amlClientModule\\\": \\\"[Scrubbed]\\\", \\\"amlClientFunction\\\": \\\"[Scrubbed]\\\", \\\"tenantId\\\": \\\"660b3398-b80e-49d2-bc5b-ac1dc93b5254\\\", \\\"amlClientRequestId\\\": \\\"7958985c-7507-4303-8da9-623527ee82e2\\\", \\\"amlClientSessionId\\\": \\\"b7dd5a4c-4892-4d9a-8b57-4144b46ba9f3\\\", \\\"subscriptionId\\\": \\\"610d6e37-4747-4a20-80eb-3aad70a55f43\\\", \\\"estimator\\\": \\\"SKLearn\\\", \\\"samplingMethod\\\": \\\"RANDOM\\\", \\\"terminationPolicy\\\": \\\"Bandit\\\", \\\"primaryMetricGoal\\\": \\\"maximize\\\", \\\"maxTotalRuns\\\": 100, \\\"maxConcurrentRuns\\\": 4, \\\"maxDurationMinutes\\\": 10080, \\\"vmSize\\\": null}}}\", \"platform_config\": \"{\\\"ServiceAddress\\\": \\\"https://southcentralus.experiments.azureml.net\\\", \\\"ServiceArmScope\\\": \\\"subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/telco-customer-churn\\\", \\\"SubscriptionId\\\": \\\"610d6e37-4747-4a20-80eb-3aad70a55f43\\\", \\\"ResourceGroupName\\\": \\\"aml-quickstarts-162142\\\", \\\"WorkspaceName\\\": \\\"quick-starts-ws-162142\\\", \\\"ExperimentName\\\": \\\"telco-customer-churn\\\", \\\"Definition\\\": {\\\"Overrides\\\": {\\\"script\\\": \\\"train_forest.py\\\", \\\"arguments\\\": [], \\\"target\\\": \\\"cluster-vhcg\\\", \\\"framework\\\": \\\"Python\\\", \\\"communicator\\\": \\\"None\\\", \\\"maxRunDurationSeconds\\\": null, \\\"nodeCount\\\": 1, \\\"priority\\\": null, \\\"environment\\\": {\\\"name\\\": null, \\\"version\\\": null, \\\"environmentVariables\\\": {\\\"EXAMPLE_ENV_VAR\\\": \\\"EXAMPLE_VALUE\\\"}, \\\"python\\\": {\\\"userManagedDependencies\\\": true, \\\"interpreterPath\\\": \\\"python\\\", \\\"condaDependenciesFile\\\": null, \\\"baseCondaEnvironment\\\": null, \\\"condaDependencies\\\": {\\\"name\\\": \\\"project_environment\\\", \\\"dependencies\\\": [\\\"python=3.6.2\\\", {\\\"pip\\\": [\\\"azureml-defaults\\\"]}], \\\"channels\\\": [\\\"anaconda\\\", \\\"conda-forge\\\"]}}, \\\"docker\\\": {\\\"enabled\\\": true, \\\"baseImage\\\": \\\"sklearn:0.20.3-cpu\\\", \\\"baseDockerfile\\\": null, \\\"sharedVolumes\\\": true, \\\"shmSize\\\": \\\"2g\\\", \\\"arguments\\\": [], \\\"baseImageRegistry\\\": {\\\"address\\\": \\\"viennaprivate.azurecr.io\\\", \\\"username\\\": null, \\\"password\\\": null, \\\"registryIdentity\\\": null}, \\\"platform\\\": {\\\"os\\\": \\\"Linux\\\", \\\"architecture\\\": \\\"amd64\\\"}}, \\\"spark\\\": {\\\"repositories\\\": [], \\\"packages\\\": [], \\\"precachePackages\\\": false}, \\\"databricks\\\": {\\\"mavenLibraries\\\": [], \\\"pypiLibraries\\\": [], \\\"rcranLibraries\\\": [], \\\"jarLibraries\\\": [], \\\"eggLibraries\\\": []}, \\\"r\\\": null, \\\"inferencingStackVersion\\\": null}, \\\"history\\\": {\\\"outputCollection\\\": true, \\\"snapshotProject\\\": true, \\\"directoriesToWatch\\\": [\\\"logs\\\"]}, \\\"spark\\\": {\\\"configuration\\\": {\\\"spark.app.name\\\": \\\"Azure ML Experiment\\\", \\\"spark.yarn.maxAppAttempts\\\": 1}}, \\\"docker\\\": {\\\"useDocker\\\": false, \\\"sharedVolumes\\\": true, \\\"arguments\\\": [], \\\"shmSize\\\": \\\"2g\\\"}, \\\"hdi\\\": {\\\"yarnDeployMode\\\": \\\"cluster\\\"}, \\\"tensorflow\\\": {\\\"workerCount\\\": 1, \\\"parameterServerCount\\\": 1}, \\\"mpi\\\": {\\\"processCountPerNode\\\": 1, \\\"nodeCount\\\": 1}, \\\"pytorch\\\": {\\\"communicationBackend\\\": \\\"nccl\\\", \\\"processCount\\\": null, \\\"nodeCount\\\": 1}, \\\"paralleltask\\\": {\\\"maxRetriesPerWorker\\\": 0, \\\"workerCountPerNode\\\": 1, \\\"terminalExitCodes\\\": null}, \\\"dataReferences\\\": {}, \\\"data\\\": {}, \\\"outputData\\\": {}, \\\"sourceDirectoryDataStore\\\": null, \\\"amlcompute\\\": {\\\"vmSize\\\": null, \\\"vmPriority\\\": null, \\\"retainCluster\\\": false, \\\"name\\\": null, \\\"clusterMaxNodeCount\\\": 1}, \\\"credentialPassthrough\\\": false, \\\"command\\\": \\\"\\\", \\\"environmentVariables\\\": {}, \\\"applicationEndpoints\\\": {}}, \\\"TargetDetails\\\": null, \\\"SnapshotId\\\": \\\"e8fae36b-057e-41e7-876f-41f135f5e19e\\\", \\\"TelemetryValues\\\": {\\\"amlClientType\\\": \\\"azureml-sdk-train\\\", \\\"amlClientModule\\\": \\\"[Scrubbed]\\\", \\\"amlClientFunction\\\": \\\"[Scrubbed]\\\", \\\"tenantId\\\": \\\"660b3398-b80e-49d2-bc5b-ac1dc93b5254\\\", \\\"amlClientRequestId\\\": \\\"7958985c-7507-4303-8da9-623527ee82e2\\\", \\\"amlClientSessionId\\\": \\\"b7dd5a4c-4892-4d9a-8b57-4144b46ba9f3\\\", \\\"subscriptionId\\\": \\\"610d6e37-4747-4a20-80eb-3aad70a55f43\\\", \\\"estimator\\\": \\\"SKLearn\\\", \\\"samplingMethod\\\": \\\"RANDOM\\\", \\\"terminationPolicy\\\": \\\"Bandit\\\", \\\"primaryMetricGoal\\\": \\\"maximize\\\", \\\"maxTotalRuns\\\": 100, \\\"maxConcurrentRuns\\\": 4, \\\"maxDurationMinutes\\\": 10080, \\\"vmSize\\\": null}}}\", \"_aml_system_resume_child_runs\": \"null\", \"resume_child_runs\": \"null\", \"_aml_system_all_jobs_generated\": \"false\", \"all_jobs_generated\": \"false\", \"_aml_system_cancellation_requested\": \"false\", \"cancellation_requested\": \"false\", \"_aml_system_progress_metadata_evaluation_timestamp\": \"\\\"2021-10-27T01:46:12.664181\\\"\", \"progress_metadata_evaluation_timestamp\": \"\\\"2021-10-27T01:46:12.664181\\\"\", \"_aml_system_progress_metadata_digest\": \"\\\"850fff01372d98523e245e0d2c4e3709b2d9f84084703987135532fec66d1f3c\\\"\", \"progress_metadata_digest\": \"\\\"850fff01372d98523e245e0d2c4e3709b2d9f84084703987135532fec66d1f3c\\\"\", \"_aml_system_progress_metadata_active_timestamp\": \"\\\"2021-10-27T01:46:12.664181\\\"\", \"progress_metadata_active_timestamp\": \"\\\"2021-10-27T01:46:12.664181\\\"\", \"_aml_system_optimizer_state_artifact\": \"null\", \"_aml_system_outdated_optimizer_state_artifacts\": \"\\\"[]\\\"\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_0\": \"{\\\"--max_depth\\\": 90, \\\"--max_features\\\": 0.6236127032345697, \\\"--min_samples_leaf\\\": 0.31698728229938494, \\\"--min_samples_split\\\": 0.7471972610890611, \\\"--n_estimators\\\": 2000}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_1\": \"{\\\"--max_depth\\\": 10, \\\"--max_features\\\": 0.7396722045632933, \\\"--min_samples_leaf\\\": 0.23493271271492938, \\\"--min_samples_split\\\": 0.2498417421977036, \\\"--n_estimators\\\": 10}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_2\": \"{\\\"--max_depth\\\": 50, \\\"--max_features\\\": 0.5105225107034568, \\\"--min_samples_leaf\\\": 0.4776119112691024, \\\"--min_samples_split\\\": 0.08901209888210876, \\\"--n_estimators\\\": 100}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_3\": \"{\\\"--max_depth\\\": 50, \\\"--max_features\\\": 0.7598774918358555, \\\"--min_samples_leaf\\\": 0.37766586397266694, \\\"--min_samples_split\\\": 0.5216211760363221, \\\"--n_estimators\\\": 100}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_4\": \"{\\\"--max_depth\\\": 20, \\\"--max_features\\\": 0.6003094445359952, \\\"--min_samples_leaf\\\": 0.19228596916332655, \\\"--min_samples_split\\\": 0.8112757315336012, \\\"--n_estimators\\\": 700}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_5\": \"{\\\"--max_depth\\\": 10, \\\"--max_features\\\": 0.7428796591232063, \\\"--min_samples_leaf\\\": 0.23561229645176496, \\\"--min_samples_split\\\": 0.710586035754922, \\\"--n_estimators\\\": 1000}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_6\": \"{\\\"--max_depth\\\": 90, \\\"--max_features\\\": 0.8575815285267313, \\\"--min_samples_leaf\\\": 0.3987466588577038, \\\"--min_samples_split\\\": 0.362099310817267, \\\"--n_estimators\\\": 100}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_7\": \"{\\\"--max_depth\\\": 20, \\\"--max_features\\\": 0.6740939351090336, \\\"--min_samples_leaf\\\": 0.3301845419807583, \\\"--min_samples_split\\\": 0.3301145580736925, \\\"--n_estimators\\\": 500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_8\": \"{\\\"--max_depth\\\": 80, \\\"--max_features\\\": 0.5930418705220997, \\\"--min_samples_leaf\\\": 0.14468096330998217, \\\"--min_samples_split\\\": 0.08960980836426824, \\\"--n_estimators\\\": 1000}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_9\": \"{\\\"--max_depth\\\": 100, \\\"--max_features\\\": 0.7661134400258633, \\\"--min_samples_leaf\\\": 0.021842952551601045, \\\"--min_samples_split\\\": 0.46038227890481637, \\\"--n_estimators\\\": 200}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_10\": \"{\\\"--max_depth\\\": 80, \\\"--max_features\\\": 0.5988119162984151, \\\"--min_samples_leaf\\\": 0.11010104290200723, \\\"--min_samples_split\\\": 0.9150503994050749, \\\"--n_estimators\\\": 100}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_11\": \"{\\\"--max_depth\\\": 90, \\\"--max_features\\\": 0.7885691443662675, \\\"--min_samples_leaf\\\": 0.20863478725240056, \\\"--min_samples_split\\\": 0.18676253900952303, \\\"--n_estimators\\\": 500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_12\": \"{\\\"--max_depth\\\": 60, \\\"--max_features\\\": 0.8358465474546142, \\\"--min_samples_leaf\\\": 0.06882963049530975, \\\"--min_samples_split\\\": 0.6666725843169254, \\\"--n_estimators\\\": 100}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_13\": \"{\\\"--max_depth\\\": 50, \\\"--max_features\\\": 0.8458824921991661, \\\"--min_samples_leaf\\\": 0.3881409960464794, \\\"--min_samples_split\\\": 0.6632215491496197, \\\"--n_estimators\\\": 10}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_14\": \"{\\\"--max_depth\\\": 90, \\\"--max_features\\\": 0.869100522173627, \\\"--min_samples_leaf\\\": 0.48268941118353154, \\\"--min_samples_split\\\": 0.7923453913898203, \\\"--n_estimators\\\": 100}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_15\": \"{\\\"--max_depth\\\": 10, \\\"--max_features\\\": 0.8528596150048606, \\\"--min_samples_leaf\\\": 0.19426226343099465, \\\"--min_samples_split\\\": 0.7134885731788074, \\\"--n_estimators\\\": 500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_16\": \"{\\\"--max_depth\\\": 30, \\\"--max_features\\\": 0.8038121279116947, \\\"--min_samples_leaf\\\": 0.4104730841723464, \\\"--min_samples_split\\\": 0.16161312270255052, \\\"--n_estimators\\\": 200}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_17\": \"{\\\"--max_depth\\\": 20, \\\"--max_features\\\": 0.8118118158828616, \\\"--min_samples_leaf\\\": 0.2778974438453613, \\\"--min_samples_split\\\": 0.9253602119424396, \\\"--n_estimators\\\": 500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_18\": \"{\\\"--max_depth\\\": 30, \\\"--max_features\\\": 0.7819341122799961, \\\"--min_samples_leaf\\\": 0.4821499158593212, \\\"--min_samples_split\\\": 0.7324492008816468, \\\"--n_estimators\\\": 700}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_19\": \"{\\\"--max_depth\\\": 60, \\\"--max_features\\\": 0.7854786156023801, \\\"--min_samples_leaf\\\": 0.3155621940212127, \\\"--min_samples_split\\\": 0.6837936447926765, \\\"--n_estimators\\\": 1500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_20\": \"{\\\"--max_depth\\\": 60, \\\"--max_features\\\": 0.6883180477973172, \\\"--min_samples_leaf\\\": 0.382980025232482, \\\"--min_samples_split\\\": 0.12825307836973332, \\\"--n_estimators\\\": 100}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_21\": \"{\\\"--max_depth\\\": 30, \\\"--max_features\\\": 0.6013915694417938, \\\"--min_samples_leaf\\\": 0.08864655866521833, \\\"--min_samples_split\\\": 0.9046254897295457, \\\"--n_estimators\\\": 1000}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_22\": \"{\\\"--max_depth\\\": 60, \\\"--max_features\\\": 0.5251377298749267, \\\"--min_samples_leaf\\\": 0.06049413527847907, \\\"--min_samples_split\\\": 0.9243601297571443, \\\"--n_estimators\\\": 1500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_23\": \"{\\\"--max_depth\\\": 40, \\\"--max_features\\\": 0.5810067469478982, \\\"--min_samples_leaf\\\": 0.49552425902836206, \\\"--min_samples_split\\\": 0.827975329461428, \\\"--n_estimators\\\": 10}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_24\": \"{\\\"--max_depth\\\": 60, \\\"--max_features\\\": 0.999227709004088, \\\"--min_samples_leaf\\\": 0.4817771578548301, \\\"--min_samples_split\\\": 0.7802002829356655, \\\"--n_estimators\\\": 500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_25\": \"{\\\"--max_depth\\\": 60, \\\"--max_features\\\": 0.6140005904805634, \\\"--min_samples_leaf\\\": 0.06548755200203882, \\\"--min_samples_split\\\": 0.3793230385021478, \\\"--n_estimators\\\": 1500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_26\": \"{\\\"--max_depth\\\": 80, \\\"--max_features\\\": 0.6139124866834342, \\\"--min_samples_leaf\\\": 0.4028243342573278, \\\"--min_samples_split\\\": 0.16340335108581383, \\\"--n_estimators\\\": 200}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_27\": \"{\\\"--max_depth\\\": 60, \\\"--max_features\\\": 0.5825892569892179, \\\"--min_samples_leaf\\\": 0.3562731509767478, \\\"--min_samples_split\\\": 0.8552450727692334, \\\"--n_estimators\\\": 2000}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_28\": \"{\\\"--max_depth\\\": 60, \\\"--max_features\\\": 0.5068547760440048, \\\"--min_samples_leaf\\\": 0.05593554156707941, \\\"--min_samples_split\\\": 0.13474449034890845, \\\"--n_estimators\\\": 1000}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_29\": \"{\\\"--max_depth\\\": 10, \\\"--max_features\\\": 0.9156997439083798, \\\"--min_samples_leaf\\\": 0.39845716176932516, \\\"--min_samples_split\\\": 0.9554532426134499, \\\"--n_estimators\\\": 10}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_30\": \"{\\\"--max_depth\\\": 20, \\\"--max_features\\\": 0.7943619493313514, \\\"--min_samples_leaf\\\": 0.3926556182206003, \\\"--min_samples_split\\\": 0.282236830144918, \\\"--n_estimators\\\": 2000}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_31\": \"{\\\"--max_depth\\\": 90, \\\"--max_features\\\": 0.5669774259750323, \\\"--min_samples_leaf\\\": 0.011627939894673901, \\\"--min_samples_split\\\": 0.7571948036379617, \\\"--n_estimators\\\": 500}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_32\": \"{\\\"--max_depth\\\": 10, \\\"--max_features\\\": 0.9160606175366033, \\\"--min_samples_leaf\\\": 0.3803775370368121, \\\"--min_samples_split\\\": 0.22793771511496974, \\\"--n_estimators\\\": 10}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_33\": \"{\\\"--max_depth\\\": 100, \\\"--max_features\\\": 0.780164519441731, \\\"--min_samples_leaf\\\": 0.13246570673610203, \\\"--min_samples_split\\\": 0.09572828250607675, \\\"--n_estimators\\\": 2000}\", \"_aml_system_HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_34\": \"{\\\"--max_depth\\\": 20, \\\"--max_features\\\": 0.9098254168311417, \\\"--min_samples_leaf\\\": 0.21111384081481563, \\\"--min_samples_split\\\": 0.10000340235323818, \\\"--n_estimators\\\": 700}\"}, \"end_time_utc\": null, \"status\": \"Running\", \"log_files\": {\"azureml-logs/hyperdrive.txt\": \"https://mlstrg162142.blob.core.windows.net/azureml/ExperimentRun/dcid.HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9/azureml-logs/hyperdrive.txt?sv=2019-07-07&sr=b&sig=WSwE8EIHCEKeR%2BGILSz2cyHoQjZkhSVPAj%2Fssm3MGAE%3D&skoid=93a019ec-b715-49de-a655-c53d958b14e4&sktid=660b3398-b80e-49d2-bc5b-ac1dc93b5254&skt=2021-10-26T22%3A33%3A16Z&ske=2021-10-28T06%3A43%3A16Z&sks=b&skv=2019-07-07&st=2021-10-27T02%3A15%3A10Z&se=2021-10-27T10%3A25%3A10Z&sp=r\"}, \"log_groups\": [[\"azureml-logs/hyperdrive.txt\"]], \"run_duration\": \"0:38:58\", \"run_number\": \"448\", \"run_queued_details\": {\"status\": \"Running\", \"details\": null}, \"hyper_parameters\": {\"--n_estimators\": [\"choice\", [[10, 100, 200, 500, 700, 1000, 1500, 2000]]], \"--max_features\": [\"uniform\", [0.5, 1.0]], \"--max_depth\": [\"choice\", [[10, 20, 30, 40, 50, 60, 70, 80, 90, 100]]], \"--min_samples_split\": [\"uniform\", [0.0001, 1.0]], \"--min_samples_leaf\": [\"uniform\", [1e-05, 0.5]]}}, \"child_runs\": [{\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_0\", \"run_number\": 451, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:49:12.723688Z\", \"end_time\": \"2021-10-27T01:49:55.622912Z\", \"created_time\": \"2021-10-27T01:46:42.757696Z\", \"created_time_dt\": \"2021-10-27T01:46:42.757696Z\", \"duration\": \"0:03:12\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 90, \"param_--max_features\": 0.6236127032345697, \"param_--min_samples_leaf\": 0.31698728229938494, \"param_--min_samples_split\": 0.7471972610890611, \"param_--n_estimators\": 2000, \"best_metric\": 0.73527324}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_3\", \"run_number\": 452, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:49:22.792117Z\", \"end_time\": \"2021-10-27T01:49:50.977357Z\", \"created_time\": \"2021-10-27T01:46:42.797221Z\", \"created_time_dt\": \"2021-10-27T01:46:42.797221Z\", \"duration\": \"0:03:08\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 50, \"param_--max_features\": 0.7598774918358555, \"param_--min_samples_leaf\": 0.37766586397266694, \"param_--min_samples_split\": 0.5216211760363221, \"param_--n_estimators\": 100, \"best_metric\": 0.73527324}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_2\", \"run_number\": 453, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:49:55.866392Z\", \"end_time\": \"2021-10-27T01:50:24.88404Z\", \"created_time\": \"2021-10-27T01:46:42.836577Z\", \"created_time_dt\": \"2021-10-27T01:46:42.836577Z\", \"duration\": \"0:03:42\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 50, \"param_--max_features\": 0.5105225107034568, \"param_--min_samples_leaf\": 0.4776119112691024, \"param_--min_samples_split\": 0.08901209888210876, \"param_--n_estimators\": 100, \"best_metric\": 0.73527324}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_1\", \"run_number\": 454, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:49:51.978899Z\", \"end_time\": \"2021-10-27T01:50:22.085911Z\", \"created_time\": \"2021-10-27T01:46:42.873562Z\", \"created_time_dt\": \"2021-10-27T01:46:42.873562Z\", \"duration\": \"0:03:39\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 10, \"param_--max_features\": 0.7396722045632933, \"param_--min_samples_leaf\": 0.23493271271492938, \"param_--min_samples_split\": 0.2498417421977036, \"param_--n_estimators\": 10, \"best_metric\": 0.73527324}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_4\", \"run_number\": 469, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:54:07.479512Z\", \"end_time\": \"2021-10-27T01:54:39.221196Z\", \"created_time\": \"2021-10-27T01:50:14.625312Z\", \"created_time_dt\": \"2021-10-27T01:50:14.625312Z\", \"duration\": \"0:04:24\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 20, \"param_--max_features\": 0.6003094445359952, \"param_--min_samples_leaf\": 0.19228596916332655, \"param_--min_samples_split\": 0.8112757315336012, \"param_--n_estimators\": 700, \"best_metric\": 0.73527324}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_5\", \"run_number\": 470, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:54:18.5557Z\", \"end_time\": \"2021-10-27T01:54:50.340235Z\", \"created_time\": \"2021-10-27T01:50:15.071558Z\", \"created_time_dt\": \"2021-10-27T01:50:15.071558Z\", \"duration\": \"0:04:35\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 10, \"param_--max_features\": 0.7428796591232063, \"param_--min_samples_leaf\": 0.23561229645176496, \"param_--min_samples_split\": 0.710586035754922, \"param_--n_estimators\": 1000, \"best_metric\": 0.73527324}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_6\", \"run_number\": 472, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:54:55.896741Z\", \"end_time\": \"2021-10-27T01:55:26.644808Z\", \"created_time\": \"2021-10-27T01:50:45.564044Z\", \"created_time_dt\": \"2021-10-27T01:50:45.564044Z\", \"duration\": \"0:04:41\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 90, \"param_--max_features\": 0.8575815285267313, \"param_--min_samples_leaf\": 0.3987466588577038, \"param_--min_samples_split\": 0.362099310817267, \"param_--n_estimators\": 100, \"best_metric\": 0.73527324}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_7\", \"run_number\": 473, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:55:23.997499Z\", \"end_time\": \"2021-10-27T01:55:54.865179Z\", \"created_time\": \"2021-10-27T01:50:45.757633Z\", \"created_time_dt\": \"2021-10-27T01:50:45.757633Z\", \"duration\": \"0:05:09\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 20, \"param_--max_features\": 0.6740939351090336, \"param_--min_samples_leaf\": 0.3301845419807583, \"param_--min_samples_split\": 0.3301145580736925, \"param_--n_estimators\": 500, \"best_metric\": 0.73527324}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_8\", \"run_number\": 486, \"metric\": 0.79063165, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:58:40.878516Z\", \"end_time\": \"2021-10-27T02:01:07.042424Z\", \"created_time\": \"2021-10-27T01:54:48.653187Z\", \"created_time_dt\": \"2021-10-27T01:54:48.653187Z\", \"duration\": \"0:06:18\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 80, \"param_--max_features\": 0.5930418705220997, \"param_--min_samples_leaf\": 0.14468096330998217, \"param_--min_samples_split\": 0.08960980836426824, \"param_--n_estimators\": 1000, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_9\", \"run_number\": 488, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:58:51.051867Z\", \"end_time\": \"2021-10-27T01:59:21.889719Z\", \"created_time\": \"2021-10-27T01:55:19.230404Z\", \"created_time_dt\": \"2021-10-27T01:55:19.230404Z\", \"duration\": \"0:04:02\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 100, \"param_--max_features\": 0.7661134400258633, \"param_--min_samples_leaf\": 0.021842952551601045, \"param_--min_samples_split\": 0.46038227890481637, \"param_--n_estimators\": 200, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_10\", \"run_number\": 490, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:58:53.941138Z\", \"end_time\": \"2021-10-27T01:59:25.023973Z\", \"created_time\": \"2021-10-27T01:55:49.887887Z\", \"created_time_dt\": \"2021-10-27T01:55:49.887887Z\", \"duration\": \"0:03:35\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 80, \"param_--max_features\": 0.5988119162984151, \"param_--min_samples_leaf\": 0.11010104290200723, \"param_--min_samples_split\": 0.9150503994050749, \"param_--n_estimators\": 100, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_11\", \"run_number\": 492, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T01:59:44.46147Z\", \"end_time\": \"2021-10-27T02:02:09.408524Z\", \"created_time\": \"2021-10-27T01:56:20.511434Z\", \"created_time_dt\": \"2021-10-27T01:56:20.511434Z\", \"duration\": \"0:05:48\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 90, \"param_--max_features\": 0.7885691443662675, \"param_--min_samples_leaf\": 0.20863478725240056, \"param_--min_samples_split\": 0.18676253900952303, \"param_--n_estimators\": 500, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_12\", \"run_number\": 506, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:03:14.56383Z\", \"end_time\": \"2021-10-27T02:03:46.327413Z\", \"created_time\": \"2021-10-27T01:59:52.207156Z\", \"created_time_dt\": \"2021-10-27T01:59:52.207156Z\", \"duration\": \"0:03:54\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 60, \"param_--max_features\": 0.8358465474546142, \"param_--min_samples_leaf\": 0.06882963049530975, \"param_--min_samples_split\": 0.6666725843169254, \"param_--n_estimators\": 100, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_13\", \"run_number\": 507, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:03:35.542911Z\", \"end_time\": \"2021-10-27T02:06:11.016969Z\", \"created_time\": \"2021-10-27T01:59:52.283237Z\", \"created_time_dt\": \"2021-10-27T01:59:52.283237Z\", \"duration\": \"0:06:18\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 50, \"param_--max_features\": 0.8458824921991661, \"param_--min_samples_leaf\": 0.3881409960464794, \"param_--min_samples_split\": 0.6632215491496197, \"param_--n_estimators\": 10, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_14\", \"run_number\": 512, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:05:24.983265Z\", \"end_time\": \"2021-10-27T02:05:55.181869Z\", \"created_time\": \"2021-10-27T02:01:23.429188Z\", \"created_time_dt\": \"2021-10-27T02:01:23.429188Z\", \"duration\": \"0:04:31\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 90, \"param_--max_features\": 0.869100522173627, \"param_--min_samples_leaf\": 0.48268941118353154, \"param_--min_samples_split\": 0.7923453913898203, \"param_--n_estimators\": 100, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_15\", \"run_number\": 517, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:06:38.556293Z\", \"end_time\": \"2021-10-27T02:07:09.070776Z\", \"created_time\": \"2021-10-27T02:02:24.146557Z\", \"created_time_dt\": \"2021-10-27T02:02:24.146557Z\", \"duration\": \"0:04:44\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 10, \"param_--max_features\": 0.8528596150048606, \"param_--min_samples_leaf\": 0.19426226343099465, \"param_--min_samples_split\": 0.7134885731788074, \"param_--n_estimators\": 500, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_16\", \"run_number\": 524, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:08:12.574925Z\", \"end_time\": \"2021-10-27T02:09:12.94168Z\", \"created_time\": \"2021-10-27T02:04:25.688999Z\", \"created_time_dt\": \"2021-10-27T02:04:25.688999Z\", \"duration\": \"0:04:47\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 30, \"param_--max_features\": 0.8038121279116947, \"param_--min_samples_leaf\": 0.4104730841723464, \"param_--min_samples_split\": 0.16161312270255052, \"param_--n_estimators\": 200, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_17\", \"run_number\": 527, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:09:06.102153Z\", \"end_time\": \"2021-10-27T02:09:37.266069Z\", \"created_time\": \"2021-10-27T02:06:27.684309Z\", \"created_time_dt\": \"2021-10-27T02:06:27.684309Z\", \"duration\": \"0:03:09\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 20, \"param_--max_features\": 0.8118118158828616, \"param_--min_samples_leaf\": 0.2778974438453613, \"param_--min_samples_split\": 0.9253602119424396, \"param_--n_estimators\": 500, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_18\", \"run_number\": 528, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:09:01.685206Z\", \"end_time\": \"2021-10-27T02:09:36.356437Z\", \"created_time\": \"2021-10-27T02:06:27.772594Z\", \"created_time_dt\": \"2021-10-27T02:06:27.772594Z\", \"duration\": \"0:03:08\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 30, \"param_--max_features\": 0.7819341122799961, \"param_--min_samples_leaf\": 0.4821499158593212, \"param_--min_samples_split\": 0.7324492008816468, \"param_--n_estimators\": 700, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_19\", \"run_number\": 536, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:10:39.970615Z\", \"end_time\": \"2021-10-27T02:11:09.441025Z\", \"created_time\": \"2021-10-27T02:07:28.636902Z\", \"created_time_dt\": \"2021-10-27T02:07:28.636902Z\", \"duration\": \"0:03:40\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 60, \"param_--max_features\": 0.7854786156023801, \"param_--min_samples_leaf\": 0.3155621940212127, \"param_--min_samples_split\": 0.6837936447926765, \"param_--n_estimators\": 1500, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_20\", \"run_number\": 544, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:12:15.366014Z\", \"end_time\": \"2021-10-27T02:12:46.644678Z\", \"created_time\": \"2021-10-27T02:09:30.110594Z\", \"created_time_dt\": \"2021-10-27T02:09:30.110594Z\", \"duration\": \"0:03:16\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 60, \"param_--max_features\": 0.6883180477973172, \"param_--min_samples_leaf\": 0.382980025232482, \"param_--min_samples_split\": 0.12825307836973332, \"param_--n_estimators\": 100, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_22\", \"run_number\": 547, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:12:51.399271Z\", \"end_time\": \"2021-10-27T02:13:18.921182Z\", \"created_time\": \"2021-10-27T02:10:00.703904Z\", \"created_time_dt\": \"2021-10-27T02:10:00.703904Z\", \"duration\": \"0:03:18\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 60, \"param_--max_features\": 0.5251377298749267, \"param_--min_samples_leaf\": 0.06049413527847907, \"param_--min_samples_split\": 0.9243601297571443, \"param_--n_estimators\": 1500, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_21\", \"run_number\": 548, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:13:23.98704Z\", \"end_time\": \"2021-10-27T02:13:54.263267Z\", \"created_time\": \"2021-10-27T02:10:00.716931Z\", \"created_time_dt\": \"2021-10-27T02:10:00.716931Z\", \"duration\": \"0:03:53\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 30, \"param_--max_features\": 0.6013915694417938, \"param_--min_samples_leaf\": 0.08864655866521833, \"param_--min_samples_split\": 0.9046254897295457, \"param_--n_estimators\": 1000, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_23\", \"run_number\": 555, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:14:31.764374Z\", \"end_time\": \"2021-10-27T02:15:25.381541Z\", \"created_time\": \"2021-10-27T02:11:31.74057Z\", \"created_time_dt\": \"2021-10-27T02:11:31.74057Z\", \"duration\": \"0:03:53\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 40, \"param_--max_features\": 0.5810067469478982, \"param_--min_samples_leaf\": 0.49552425902836206, \"param_--min_samples_split\": 0.827975329461428, \"param_--n_estimators\": 10, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_24\", \"run_number\": 565, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:17:31.220799Z\", \"end_time\": \"2021-10-27T02:18:02.724947Z\", \"created_time\": \"2021-10-27T02:13:34.44811Z\", \"created_time_dt\": \"2021-10-27T02:13:34.44811Z\", \"duration\": \"0:04:28\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 60, \"param_--max_features\": 0.999227709004088, \"param_--min_samples_leaf\": 0.4817771578548301, \"param_--min_samples_split\": 0.7802002829356655, \"param_--n_estimators\": 500, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_25\", \"run_number\": 567, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:18:02.91946Z\", \"end_time\": \"2021-10-27T02:18:35.349661Z\", \"created_time\": \"2021-10-27T02:14:05.189126Z\", \"created_time_dt\": \"2021-10-27T02:14:05.189126Z\", \"duration\": \"0:04:30\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 60, \"param_--max_features\": 0.6140005904805634, \"param_--min_samples_leaf\": 0.06548755200203882, \"param_--min_samples_split\": 0.3793230385021478, \"param_--n_estimators\": 1500, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_26\", \"run_number\": 570, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:18:37.319781Z\", \"end_time\": \"2021-10-27T02:19:08.236756Z\", \"created_time\": \"2021-10-27T02:14:35.990802Z\", \"created_time_dt\": \"2021-10-27T02:14:35.990802Z\", \"duration\": \"0:04:32\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 80, \"param_--max_features\": 0.6139124866834342, \"param_--min_samples_leaf\": 0.4028243342573278, \"param_--min_samples_split\": 0.16340335108581383, \"param_--n_estimators\": 200, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_27\", \"run_number\": 574, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:19:13.605808Z\", \"end_time\": \"2021-10-27T02:19:42.603864Z\", \"created_time\": \"2021-10-27T02:16:07.016141Z\", \"created_time_dt\": \"2021-10-27T02:16:07.016141Z\", \"duration\": \"0:03:35\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 60, \"param_--max_features\": 0.5825892569892179, \"param_--min_samples_leaf\": 0.3562731509767478, \"param_--min_samples_split\": 0.8552450727692334, \"param_--n_estimators\": 2000, \"best_metric\": 0.79063165}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_28\", \"run_number\": 585, \"metric\": 0.79701916, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:22:10.391671Z\", \"end_time\": \"2021-10-27T02:22:41.463032Z\", \"created_time\": \"2021-10-27T02:18:39.134895Z\", \"created_time_dt\": \"2021-10-27T02:18:39.134895Z\", \"duration\": \"0:04:02\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 60, \"param_--max_features\": 0.5068547760440048, \"param_--min_samples_leaf\": 0.05593554156707941, \"param_--min_samples_split\": 0.13474449034890845, \"param_--n_estimators\": 1000, \"best_metric\": 0.79701916}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_29\", \"run_number\": 587, \"metric\": 0.73527324, \"status\": \"Finalizing\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:22:46.452883Z\", \"end_time\": \"\", \"created_time\": \"2021-10-27T02:19:09.699416Z\", \"created_time_dt\": \"2021-10-27T02:19:09.699416Z\", \"duration\": \"0:06:01\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 10, \"param_--max_features\": 0.9156997439083798, \"param_--min_samples_leaf\": 0.39845716176932516, \"param_--min_samples_split\": 0.9554532426134499, \"param_--n_estimators\": 10, \"best_metric\": 0.79701916}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_30\", \"run_number\": 590, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:23:35.003364Z\", \"end_time\": \"2021-10-27T02:24:03.096854Z\", \"created_time\": \"2021-10-27T02:19:40.51495Z\", \"created_time_dt\": \"2021-10-27T02:19:40.51495Z\", \"duration\": \"0:04:22\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 20, \"param_--max_features\": 0.7943619493313514, \"param_--min_samples_leaf\": 0.3926556182206003, \"param_--min_samples_split\": 0.282236830144918, \"param_--n_estimators\": 2000, \"best_metric\": 0.79701916}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_31\", \"run_number\": 593, \"metric\": 0.73527324, \"status\": \"Completed\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"2021-10-27T02:24:08.378493Z\", \"end_time\": \"2021-10-27T02:24:39.768192Z\", \"created_time\": \"2021-10-27T02:20:11.741007Z\", \"created_time_dt\": \"2021-10-27T02:20:11.741007Z\", \"duration\": \"0:04:28\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 90, \"param_--max_features\": 0.5669774259750323, \"param_--min_samples_leaf\": 0.011627939894673901, \"param_--min_samples_split\": 0.7571948036379617, \"param_--n_estimators\": 500, \"best_metric\": 0.79701916}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_32\", \"run_number\": 600, \"metric\": null, \"status\": \"Queued\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"\", \"end_time\": \"\", \"created_time\": \"2021-10-27T02:23:13.844317Z\", \"created_time_dt\": \"2021-10-27T02:23:13.844317Z\", \"duration\": \"0:01:57\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 10, \"param_--max_features\": 0.9160606175366033, \"param_--min_samples_leaf\": 0.3803775370368121, \"param_--min_samples_split\": 0.22793771511496974, \"param_--n_estimators\": 10, \"best_metric\": null}, {\"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_33\", \"run_number\": 604, \"metric\": null, \"status\": \"Queued\", \"run_type\": \"azureml.scriptrun\", \"training_percent\": null, \"start_time\": \"\", \"end_time\": \"\", \"created_time\": \"2021-10-27T02:24:44.820399Z\", \"created_time_dt\": \"2021-10-27T02:24:44.820399Z\", \"duration\": \"0:00:26\", \"hyperdrive_id\": \"0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"arguments\": null, \"param_--max_depth\": 100, \"param_--max_features\": 0.780164519441731, \"param_--min_samples_leaf\": 0.13246570673610203, \"param_--min_samples_split\": 0.09572828250607675, \"param_--n_estimators\": 2000, \"best_metric\": null}], \"children_metrics\": {\"categories\": [0], \"series\": {\"Number of trees:\": [{\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"markers\", \"name\": \"Number of trees:\", \"stepped\": false, \"type\": \"scatter\", \"data\": [2000.0, 100.0, 100.0, 10.0, 700.0, 1000.0, 100.0, 500.0, 1000.0, 200.0, 100.0, 500.0, 100.0, 10.0, 100.0, 500.0, 200.0, 500.0, 700.0, 1500.0, 100.0, 1500.0, 1000.0, 10.0, 500.0, 1500.0, 200.0, 2000.0, 1000.0, 10.0, 2000.0, 500.0]}, {\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"lines\", \"name\": \"Number of trees:_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": [2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0, 2000.0]}], \"Max features:\": [{\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"markers\", \"name\": \"Max features:\", \"stepped\": false, \"type\": \"scatter\", \"data\": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}, {\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"lines\", \"name\": \"Max features:_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]}], \"Max depth:\": [{\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"markers\", \"name\": \"Max depth:\", \"stepped\": false, \"type\": \"scatter\", \"data\": [\"90\", \"50\", \"50\", \"10\", \"20\", \"10\", \"90\", \"20\", \"80\", \"100\", \"80\", \"90\", \"60\", \"50\", \"90\", \"10\", \"30\", \"20\", \"30\", \"60\", \"60\", \"60\", \"30\", \"40\", \"60\", \"60\", \"80\", \"60\", \"60\", \"10\", \"20\", \"90\"]}, {\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"lines\", \"name\": \"Max depth:_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": []}], \"Min number of samples:\": [{\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"markers\", \"name\": \"Min number of samples:\", \"stepped\": false, \"type\": \"scatter\", \"data\": [\"0.7471972610890611\", \"0.5216211760363221\", \"0.08901209888210876\", \"0.2498417421977036\", \"0.8112757315336012\", \"0.710586035754922\", \"0.362099310817267\", \"0.3301145580736925\", \"0.08960980836426824\", \"0.46038227890481637\", \"0.9150503994050749\", \"0.18676253900952303\", \"0.6666725843169254\", \"0.6632215491496197\", \"0.7923453913898203\", \"0.7134885731788074\", \"0.16161312270255052\", \"0.9253602119424396\", \"0.7324492008816468\", \"0.6837936447926765\", \"0.12825307836973332\", \"0.9243601297571443\", \"0.9046254897295457\", \"0.827975329461428\", \"0.7802002829356655\", \"0.3793230385021478\", \"0.16340335108581383\", \"0.8552450727692334\", \"0.13474449034890845\", \"0.9554532426134499\", \"0.282236830144918\", \"0.7571948036379617\"]}, {\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"lines\", \"name\": \"Min number of samples:_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": []}], \"Min number of samples at leaf node:\": [{\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"markers\", \"name\": \"Min number of samples at leaf node:\", \"stepped\": false, \"type\": \"scatter\", \"data\": [\"0.31698728229938494\", \"0.37766586397266694\", \"0.4776119112691024\", \"0.23493271271492938\", \"0.19228596916332655\", \"0.23561229645176496\", \"0.3987466588577038\", \"0.3301845419807583\", \"0.14468096330998217\", \"0.021842952551601045\", \"0.11010104290200723\", \"0.20863478725240056\", \"0.06882963049530975\", \"0.3881409960464794\", \"0.48268941118353154\", \"0.19426226343099465\", \"0.4104730841723464\", \"0.2778974438453613\", \"0.4821499158593212\", \"0.3155621940212127\", \"0.382980025232482\", \"0.06049413527847907\", \"0.08864655866521833\", \"0.49552425902836206\", \"0.4817771578548301\", \"0.06548755200203882\", \"0.4028243342573278\", \"0.3562731509767478\", \"0.05593554156707941\", \"0.39845716176932516\", \"0.3926556182206003\", \"0.011627939894673901\"]}, {\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"lines\", \"name\": \"Min number of samples at leaf node:_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": []}], \"Bootstrap:\": [{\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"markers\", \"name\": \"Bootstrap:\", \"stepped\": false, \"type\": \"scatter\", \"data\": [\"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\", \"True\"]}, {\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"lines\", \"name\": \"Bootstrap:_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": []}], \"Accuracy\": [{\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"markers\", \"name\": \"Accuracy\", \"stepped\": false, \"type\": \"scatter\", \"data\": [0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7906316536550745, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7970191625266146, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603]}, {\"categories\": [451, 452, 453, 454, 469, 470, 472, 473, 486, 488, 490, 492, 506, 507, 512, 517, 524, 527, 528, 536, 544, 547, 548, 555, 565, 567, 570, 574, 585, 587, 590, 593], \"mode\": \"lines\", \"name\": \"Accuracy_max\", \"stepped\": true, \"type\": \"scatter\", \"data\": [0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7352732434350603, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7906316536550745, 0.7970191625266146, 0.7970191625266146, 0.7970191625266146, 0.7970191625266146]}]}, \"metricName\": null, \"primaryMetricName\": \"Accuracy\", \"showLegend\": false}, \"run_metrics\": [{\"name\": \"best_child_by_primary_metric\", \"run_id\": \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9\", \"categories\": [0], \"series\": [{\"data\": [{\"time_elapse\": [240, 853, 2194], \"metric_value\": [0.7352732434350603, 0.7906316536550745, 0.7970191625266146], \"metric_name\": [\"Accuracy\", \"Accuracy\", \"Accuracy\"], \"run_id\": [\"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_0\", \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_8\", \"HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_28\"], \"final\": [false, false, false]}]}]}], \"run_logs\": \"[2021-10-27T01:46:12.223858][API][INFO]Experiment created\\r\\n[2021-10-27T01:46:12.829796][GENERATOR][INFO]Trying to sample '4' jobs from the hyperparameter space\\r\\n[2021-10-27T01:46:13.019327][GENERATOR][INFO]Successfully sampled '4' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T01:46:42.4515609Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_0'\\r\\n[2021-10-27T01:46:42.4540684Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_1'\\r\\n[2021-10-27T01:46:42.4555926Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_2'\\r\\n[2021-10-27T01:46:42.4736849Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_3'\\r\\n[2021-10-27T01:46:42.8374044Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_0'\\r\\n[2021-10-27T01:46:42.8853653Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_3'\\r\\n[2021-10-27T01:46:42.9211198Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_2'\\r\\n[2021-10-27T01:46:42.9456854Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_1'\\r\\n[2021-10-27T01:49:29.876893][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_0, https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_3] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T01:49:59.702240][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_1, https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_2] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T01:50:12.697946][GENERATOR][INFO]Trying to sample '2' jobs from the hyperparameter space\\r\\n[2021-10-27T01:50:12.924957][GENERATOR][INFO]Successfully sampled '2' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T01:50:14.3194787Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_4'\\r\\n[2021-10-27T01:50:14.3207995Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_5'\\r\\n[2021-10-27T01:50:14.7003224Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_4'\\r\\n[2021-10-27T01:50:15.1447778Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_5'\\r\\n[2021-10-27T01:50:42.958365][GENERATOR][INFO]Successfully sampled '2' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T01:50:42.719405][GENERATOR][INFO]Trying to sample '2' jobs from the hyperparameter space\\r\\n[2021-10-27T01:50:45.3003732Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_7'\\r\\n[2021-10-27T01:50:45.2987581Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_6'\\r\\n[2021-10-27T01:50:45.6480718Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_6'\\r\\n[2021-10-27T01:50:45.8579833Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_7'\\r\\n[2021-10-27T01:54:29.627619][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_4, https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_5] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T01:54:42.903598][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T01:54:43.034039][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T01:54:48.3194742Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_8'\\r\\n[2021-10-27T01:54:48.7421177Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_8'\\r\\n[2021-10-27T01:54:59.571004][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_6] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T01:55:12.620189][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T01:55:12.756084][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T01:55:18.9142358Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_9'\\r\\n[2021-10-27T01:55:19.3030000Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_9'\\r\\n[2021-10-27T01:55:29.627656][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_7] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T01:55:42.678943][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T01:55:42.845801][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T01:55:49.4971386Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_10'\\r\\n[2021-10-27T01:55:49.9738291Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_10'\\r\\n[2021-10-27T01:56:12.633488][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T01:56:12.858122][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T01:56:20.1367666Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_11'\\r\\n[2021-10-27T01:56:20.5931929Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_11'\\r\\n[2021-10-27T01:59:02.746779][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_8, https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_9, https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_10] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T01:59:32.624714][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_8] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T01:59:42.666029][GENERATOR][INFO]Trying to sample '2' jobs from the hyperparameter space\\r\\n[2021-10-27T01:59:42.965370][GENERATOR][INFO]Successfully sampled '2' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T01:59:51.9209335Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_12'\\r\\n[2021-10-27T01:59:51.9222360Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_13'\\r\\n[2021-10-27T01:59:52.2849815Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_12'\\r\\n[2021-10-27T01:59:52.3623800Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_13'\\r\\n[2021-10-27T02:00:02.767670][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_8, https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_11] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:01:12.737173][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:01:12.906004][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:01:23.0788960Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_14'\\r\\n[2021-10-27T02:01:23.5107822Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_14'\\r\\n[2021-10-27T02:02:12.656314][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:02:12.823563][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:02:23.8455207Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_15'\\r\\n[2021-10-27T02:02:24.2260135Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_15'\\r\\n[2021-10-27T02:04:12.625590][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:04:12.901993][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:04:25.0230796Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_16'\\r\\n[2021-10-27T02:04:25.7728347Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_16'\\r\\n[2021-10-27T02:05:33.764389][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_14] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:06:13.661143][GENERATOR][INFO]Trying to sample '2' jobs from the hyperparameter space\\r\\n[2021-10-27T02:06:13.798664][GENERATOR][INFO]Successfully sampled '2' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:06:27.3742060Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_17'\\r\\n[2021-10-27T02:06:27.3803192Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_18'\\r\\n[2021-10-27T02:06:27.7564455Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_17'\\r\\n[2021-10-27T02:06:27.8506484Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_18'\\r\\n[2021-10-27T02:07:03.661140][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_15] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:07:13.618624][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:07:13.811886][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:07:28.2418370Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_19'\\r\\n[2021-10-27T02:07:28.7076640Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_19'\\r\\n[2021-10-27T02:08:33.953707][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_16] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:09:03.821726][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_18] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:09:13.809989][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:09:13.955686][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:09:29.6250403Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_20'\\r\\n[2021-10-27T02:09:30.1910564Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_20'\\r\\n[2021-10-27T02:09:33.893843][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_17, https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_18] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:09:43.877996][GENERATOR][INFO]Trying to sample '2' jobs from the hyperparameter space\\r\\n[2021-10-27T02:09:44.036693][GENERATOR][INFO]Successfully sampled '2' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:10:00.3897341Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_21'\\r\\n[2021-10-27T02:10:00.3914485Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_22'\\r\\n[2021-10-27T02:10:00.7787041Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_22'\\r\\n[2021-10-27T02:10:00.7858543Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_21'\\r\\n[2021-10-27T02:11:14.060821][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:11:14.196544][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:11:31.4283903Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_23'\\r\\n[2021-10-27T02:11:31.8251535Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_23'\\r\\n[2021-10-27T02:12:28.513660][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_20] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:12:58.765362][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_22] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:13:14.658959][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:13:14.807279][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:13:28.732842][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_21] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:13:34.1520253Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_24'\\r\\n[2021-10-27T02:13:34.5323902Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_24'\\r\\n[2021-10-27T02:13:44.750177][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:13:44.897799][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:14:04.8148474Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_25'\\r\\n[2021-10-27T02:14:05.2765845Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_25'\\r\\n[2021-10-27T02:14:14.893934][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:14:15.090467][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:14:35.4777854Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_26'\\r\\n[2021-10-27T02:14:36.0658462Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_26'\\r\\n[2021-10-27T02:14:59.452771][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_23] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:15:44.690281][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:15:44.910344][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:16:06.7275659Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_27'\\r\\n[2021-10-27T02:16:07.1031211Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_27'\\r\\n[2021-10-27T02:17:59.888921][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_24] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:18:14.746398][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:18:14.895104][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:18:29.789371][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_25] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:18:38.3520407Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_28'\\r\\n[2021-10-27T02:18:39.2177876Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_28'\\r\\n[2021-10-27T02:18:44.695208][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:18:44.839620][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:18:59.622345][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_26] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:19:09.3908948Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_29'\\r\\n[2021-10-27T02:19:09.7719856Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_29'\\r\\n[2021-10-27T02:19:14.695866][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:19:14.823567][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:19:29.761961][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_27] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:19:39.9817630Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_30'\\r\\n[2021-10-27T02:19:40.5935354Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_30'\\r\\n[2021-10-27T02:19:44.860149][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:19:45.017515][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:20:10.8736053Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_31'\\r\\n[2021-10-27T02:20:11.8137764Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_31'\\r\\n[2021-10-27T02:22:31.449691][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_28] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:22:44.870241][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:22:45.023686][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:23:01.877698][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_29] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:23:13.0827173Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_32'\\r\\n[2021-10-27T02:23:13.9195605Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_32'\\r\\n[2021-10-27T02:24:01.787131][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_30] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:24:28.719996][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:24:28.862669][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\r\\n[2021-10-27T02:24:33.567658][ENFORCER][INFO]Jobs [https://southcentralus.experiments.azureml.net/subscriptions/610d6e37-4747-4a20-80eb-3aad70a55f43/resourceGroups/aml-quickstarts-162142/providers/Microsoft.MachineLearningServices/workspaces/quick-starts-ws-162142/experiments/**SCRUBBED**/runs/HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_31] do not contain any metrics with the primary metric name at this moment, policy cannot be applied.\\r\\n[2021-10-27T02:24:44.5260701Z][SCHEDULER][INFO]Scheduling job, id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_33'\\r\\n[2021-10-27T02:24:44.9098139Z][SCHEDULER][INFO]Successfully scheduled a job. Id='HD_0b355d36-5cd5-4fbf-aee6-46c75e6f21f9_33'\\r\\n[2021-10-27T02:24:58.702712][GENERATOR][INFO]Trying to sample '1' jobs from the hyperparameter space\\r\\n[2021-10-27T02:24:58.845232][GENERATOR][INFO]Successfully sampled '1' jobs, they will soon be submitted to the execution target.\\n\", \"graph\": {}, \"widget_settings\": {\"childWidgetDisplay\": \"popup\", \"send_telemetry\": false, \"log_level\": \"INFO\", \"sdk_version\": \"1.34.0\"}, \"loading\": false}"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 59,
+      "metadata": {
+        "gather": {
+          "logged": 1635299056435
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "assert(hyperdrive_run.get_status() == 'Completed')"
+      ],
+      "outputs": [],
+      "execution_count": 7,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1635291108639
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Best Model\n",
+        "\n",
+        "TODO: In the cell below, get the best model from the hyperdrive experiments and display all the properties of the model."
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import joblib\n",
+        "# Get your best run and save the model from that run.\n",
+        "best_run = hyperdrive_run.get_best_run_by_primary_metric()\n",
+        "best_run_metrics = best_run.get_metrics()\n",
+        "parameter_values = best_run.get_details()['runDefinition']['arguments']\n",
+        "\n",
+        "print('Best parameters: ', parameter_values)\n",
+        "print('Best Run Id: ', best_run.id)\n",
+        "print('\\n Accuracy:', best_run_metrics['Accuracy'])\n"
+      ],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Best parameters:  ['--C', '0.1', '--max_iter', '100', '--solver', 'lbfgs']\nBest Run Id:  HD_57579958-57e8-48a4-a6ed-4e9eeb274d80_21\n\n Accuracy: 0.8232789212207239\n"
+        }
+      ],
+      "execution_count": 8,
+      "metadata": {
+        "gather": {
+          "logged": 1635291179630
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "#TODO: Save the best model\n",
+        "best_model = best_run.register_model(model_name='udacity_project_model', model_path='./')"
+      ],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {
+        "gather": {
+          "logged": 1598546657829
+        },
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "## Model Deployment\n",
+        "\n",
+        "Remember you have to deploy only one of the two models you trained.. Perform the steps in the rest of this notebook only if you wish to deploy this model.\n",
+        "\n",
+        "TODO: In the cell below, register the model, create an inference config and deploy the model as a web service."
+      ],
+      "metadata": {
+        "collapsed": true,
+        "jupyter": {
+          "outputs_hidden": false,
+          "source_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {}
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "TODO: In the cell below, send a request to the web service you deployed to test it."
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {}
+    },
+    {
+      "cell_type": "markdown",
+      "source": [
+        "TODO: In the cell below, print the logs of the web service and delete the service"
+      ],
+      "metadata": {}
+    },
+    {
+      "cell_type": "code",
+      "source": [],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {}
+    }
+  ],
+  "metadata": {
+    "kernel_info": {
+      "name": "python3"
+    },
+    "kernelspec": {
+      "name": "python3",
+      "language": "python",
+      "display_name": "Python 3"
+    },
+    "language_info": {
+      "name": "python",
+      "version": "3.6.9",
+      "mimetype": "text/x-python",
+      "codemirror_mode": {
+        "name": "ipython",
+        "version": 3
+      },
+      "pygments_lexer": "ipython3",
+      "nbconvert_exporter": "python",
+      "file_extension": ".py"
+    },
+    "nteract": {
+      "version": "nteract-front-end@1.0.0"
+    },
+    "microsoft": {
+      "host": {
+        "AzureML": {
+          "notebookHasBeenCompleted": true
+        }
+      }
+    }
+  },
+  "nbformat": 4,
+  "nbformat_minor": 2
+}
