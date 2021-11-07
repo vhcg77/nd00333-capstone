@@ -1142,13 +1142,12 @@
     {
       "cell_type": "code",
       "source": [
-        "\r\n",
         "dataset_test = test_data\r\n",
         "df_test = dataset_test.to_pandas_dataframe()\r\n",
         "df_test = df_test[pd.notnull(df_test['Churn'])]\r\n",
         "\r\n",
         "y_test = df_test['Churn']\r\n",
-        "X_test = df_test.drop(['y'], axis=1)"
+        "X_test = df_test.drop(['Churn'], axis=1)"
       ],
       "outputs": [],
       "execution_count": null,
@@ -1180,10 +1179,11 @@
     {
       "cell_type": "code",
       "source": [
-        "\r\n",
-        "from sklearn.metrics import confusion_matrix\r\n",
+        "from sklearn.metrics import confusion_matrix, accuracy_score, roc_auc_score\r\n",
         "ypred = best_model.predict(X_test)\r\n",
-        "cm = confusion_matrix(y_test, ypred)\r\n"
+        "cm = confusion_matrix(y_test, ypred)\r\n",
+        "accuracy = accuracy_score(y_test, ypred)\r\n",
+        "auc = roc_auc_score(y_test, ypred)\r\n"
       ],
       "outputs": [],
       "execution_count": null,
@@ -1204,6 +1204,26 @@
       "source": [
         "# Visualize the confusion matrix\r\n",
         "pd.DataFrame(cm).style.background_gradient(cmap='Blues', low=0, high=0.9)"
+      ],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "print(\"Accuracy score is: \", accuracy)\r\n",
+        "print(\"AUC score is: \", auc)"
       ],
       "outputs": [],
       "execution_count": null,
@@ -1341,6 +1361,23 @@
         "published_pipeline_run = PipelineRun(ws.experiments[\"pipeline-rest-endpoint\"], run_id)\r\n",
         "RunDetails(published_pipeline_run).show()"
       ],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [],
       "outputs": [],
       "execution_count": null,
       "metadata": {
