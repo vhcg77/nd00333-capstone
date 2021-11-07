@@ -779,6 +779,8 @@
         "                                experiment_timeout_minutes=30,\n",
         "                                max_concurrent_iterations=5,\n",
         "                                max_cores_per_iteration=-1, \n",
+        "                                featurization= 'auto',\n",
+        "                                debug_log = \"automl_errors.log\",                                \n",
         "\n",
         "                                )"
       ],
