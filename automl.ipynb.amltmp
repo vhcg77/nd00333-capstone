@@ -1112,8 +1112,127 @@
       }
     },
     {
+      "cell_type": "markdown",
+      "source": [
+        "\r\n",
+        "## Publish and run from REST endpoint"
+      ],
+      "metadata": {
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
       "cell_type": "code",
-      "source": [],
+      "source": [
+        "\r\n",
+        "published_pipeline = pipeline_run.publish_pipeline(\r\n",
+        "    name=\"Bankmarketing Train\", description=\"Training bankmarketing pipeline\", version=\"1.0\")\r\n",
+        "\r\n",
+        "published_pipeline"
+      ],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "from azureml.core.authentication import InteractiveLoginAuthentication\r\n",
+        "\r\n",
+        "interactive_auth = InteractiveLoginAuthentication()\r\n",
+        "auth_header = interactive_auth.get_authentication_header()"
+      ],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "import requests\r\n",
+        "\r\n",
+        "rest_endpoint = published_pipeline.endpoint\r\n",
+        "response = requests.post(rest_endpoint, \r\n",
+        "                         headers=auth_header, \r\n",
+        "                         json={\"ExperimentName\": \"pipeline-rest-endpoint\"}\r\n",
+        "                        )"
+      ],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "try:\r\n",
+        "    response.raise_for_status()\r\n",
+        "except Exception:    \r\n",
+        "    raise Exception(\"Received bad response from the endpoint: {}\\n\"\r\n",
+        "                    \"Response Code: {}\\n\"\r\n",
+        "                    \"Headers: {}\\n\"\r\n",
+        "                    \"Content: {}\".format(rest_endpoint, response.status_code, response.headers, response.content))\r\n",
+        "\r\n",
+        "run_id = response.json().get('Id')\r\n",
+        "print('Submitted pipeline run: ', run_id)"
+      ],
+      "outputs": [],
+      "execution_count": null,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\r\n",
+        "from azureml.pipeline.core.run import PipelineRun\r\n",
+        "from azureml.widgets import RunDetails\r\n",
+        "\r\n",
+        "published_pipeline_run = PipelineRun(ws.experiments[\"pipeline-rest-endpoint\"], run_id)\r\n",
+        "RunDetails(published_pipeline_run).show()"
+      ],
       "outputs": [],
       "execution_count": null,
       "metadata": {
