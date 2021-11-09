@@ -35,7 +35,7 @@
       "execution_count": 1,
       "metadata": {
         "gather": {
-          "logged": 1636422433835
+          "logged": 1636423540685
         }
       }
     },
@@ -58,7 +58,7 @@
         "ws = Workspace.from_config()\r\n",
         "\r\n",
         "# choose a name for experiment\r\n",
-        "experiment_name = 'telco-customer-churn'\r\n",
+        "experiment_name = 'telco-customer-churn-hyperdrive-logistic-regression'\r\n",
         "experiment=Experiment(ws, experiment_name)\r\n",
         "\r\n",
         "script_folder = './script'\r\n",
@@ -85,7 +85,7 @@
           }
         },
         "gather": {
-          "logged": 1636422443702
+          "logged": 1636423543232
         }
       }
     },
@@ -145,7 +145,7 @@
       "execution_count": 3,
       "metadata": {
         "gather": {
-          "logged": 1636422454687
+          "logged": 1636423549353
         },
         "jupyter": {
           "outputs_hidden": false,
@@ -242,7 +242,7 @@
           }
         },
         "gather": {
-          "logged": 1636422584899
+          "logged": 1636423551449
         }
       }
     },
@@ -264,7 +264,7 @@
           }
         },
         "gather": {
-          "logged": 1636422588415
+          "logged": 1636423553020
         }
       }
     },
@@ -287,9 +287,61 @@
         "# TODO: Split data into train and test sets.\r\n",
         "x_train, x_test, y_train, y_test = train_test_split(\r\n",
         "    x, y, test_size=0.2, stratify=y, random_state=42\r\n",
-        ")"
+        ")\r\n",
+        "\r\n",
+        "train_dataset = pd.concat([x_train,pd.DataFrame(y_train)], axis=1)\r\n",
+        "test_dataset = pd.concat([x_test,pd.DataFrame(y_test)], axis=1)\r\n",
+        "\r\n",
+        "directory = 'train'\r\n",
+        "if not os.path.exists(directory):\r\n",
+        "    os.makedirs(directory)\r\n",
+        "    \r\n",
+        "directory = 'test'\r\n",
+        "if not os.path.exists(directory):\r\n",
+        "    os.makedirs(directory)\r\n",
+        "\r\n",
+        "# Export data as csv\r\n",
+        "train_dataset.to_csv(\"./train/train_data.csv\", index=False)\r\n",
+        "test_dataset.to_csv(\"./test/test_data.csv\", index=False)\r\n",
+        "\r\n",
+        "# # Upload data to the datastore\r\n",
+        "datastore = ws.get_default_datastore()\r\n",
+        "datastore.upload(src_dir='./train', target_path = experiment_name)\r\n",
+        "datastore.upload(src_dir='./test', target_path = experiment_name)\r\n",
+        "print('Data uploaded to DataStore')\r\n",
+        "\r\n",
+        "csv_path_train = [(datastore, experiment_name+'/train_data.csv')]\r\n",
+        "csv_path_test = [(datastore, experiment_name+'/test_data.csv')]\r\n",
+        "\r\n",
+        "train_data = Dataset.Tabular.from_delimited_files(path=csv_path_train)\r\n",
+        "test_data = Dataset.Tabular.from_delimited_files(path=csv_path_test)\r\n",
+        "\r\n",
+        "display(train_data.to_pandas_dataframe().head())\r\n",
+        "display(test_data.to_pandas_dataframe().head())\r\n"
       ],
-      "outputs": [],
+      "outputs": [
+        {
+          "output_type": "stream",
+          "name": "stdout",
+          "text": "Uploading an estimated of 1 files\nUploading ./train/train_data.csv\nUploaded ./train/train_data.csv, 1 files out of an estimated total of 1\nUploaded 1 files\nUploading an estimated of 1 files\nUploading ./test/test_data.csv\nUploaded ./test/test_data.csv, 1 files out of an estimated total of 1\nUploaded 1 files\nData uploaded to DataStore\n"
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "   gender  SeniorCitizen  Partner  Dependents  tenure  PhoneService  \\\n0       0              0        0           0       2             0   \n1       1              0        0           0      26             0   \n2       0              0        0           0       4             0   \n3       1              1        0           0      72             0   \n4       0              0        0           0      69             0   \n\n   PaperlessBilling  MonthlyCharges  TotalCharges  MultipleLines_No  ...  \\\n0                 0           19.75         39.30                 1  ...   \n1                 0           90.10       2312.55                 0  ...   \n2                 0           74.65        301.40                 0  ...   \n3                 0          114.65       8333.95                 0  ...   \n4                 0           75.75       5388.15                 1  ...   \n\n   StreamingMovies_No internet service  StreamingMovies_Yes  \\\n0                                    1                    0   \n1                                    0                    1   \n2                                    0                    0   \n3                                    0                    1   \n4                                    0                    0   \n\n   Contract_Month-to-month  Contract_One year  Contract_Two year  \\\n0                        1                  0                  0   \n1                        0                  1                  0   \n2                        1                  0                  0   \n3                        0                  0                  1   \n4                        0                  0                  1   \n\n   PaymentMethod_Bank transfer (automatic)  \\\n0                                        0   \n1                                        0   \n2                                        0   \n3                                        1   \n4                                        1   \n\n   PaymentMethod_Credit card (automatic)  PaymentMethod_Electronic check  \\\n0                                      0                               0   \n1                                      1                               0   \n2                                      0                               1   \n3                                      0                               0   \n4                                      0                               0   \n\n   PaymentMethod_Mailed check  Churn  \n0                           1      0  \n1                           0      0  \n2                           0      0  \n3                           0      0  \n4                           0      0  \n\n[5 rows x 41 columns]",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>gender</th>\n      <th>SeniorCitizen</th>\n      <th>Partner</th>\n      <th>Dependents</th>\n      <th>tenure</th>\n      <th>PhoneService</th>\n      <th>PaperlessBilling</th>\n      <th>MonthlyCharges</th>\n      <th>TotalCharges</th>\n      <th>MultipleLines_No</th>\n      <th>...</th>\n      <th>StreamingMovies_No internet service</th>\n      <th>StreamingMovies_Yes</th>\n      <th>Contract_Month-to-month</th>\n      <th>Contract_One year</th>\n      <th>Contract_Two year</th>\n      <th>PaymentMethod_Bank transfer (automatic)</th>\n      <th>PaymentMethod_Credit card (automatic)</th>\n      <th>PaymentMethod_Electronic check</th>\n      <th>PaymentMethod_Mailed check</th>\n      <th>Churn</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>2</td>\n      <td>0</td>\n      <td>0</td>\n      <td>19.75</td>\n      <td>39.30</td>\n      <td>1</td>\n      <td>...</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>26</td>\n      <td>0</td>\n      <td>0</td>\n      <td>90.10</td>\n      <td>2312.55</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>4</td>\n      <td>0</td>\n      <td>0</td>\n      <td>74.65</td>\n      <td>301.40</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>1</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>72</td>\n      <td>0</td>\n      <td>0</td>\n      <td>114.65</td>\n      <td>8333.95</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>69</td>\n      <td>0</td>\n      <td>0</td>\n      <td>75.75</td>\n      <td>5388.15</td>\n      <td>1</td>\n      <td>...</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n  </tbody>\n</table>\n<p>5 rows × 41 columns</p>\n</div>"
+          },
+          "metadata": {}
+        },
+        {
+          "output_type": "display_data",
+          "data": {
+            "text/plain": "   gender  SeniorCitizen  Partner  Dependents  tenure  PhoneService  \\\n0       1              0        0           0      66             0   \n1       0              0        0           0      43             0   \n2       0              0        0           0       1             0   \n3       0              0        0           0      49             0   \n4       0              0        0           0      56             0   \n\n   PaperlessBilling  MonthlyCharges  TotalCharges  MultipleLines_No  ...  \\\n0                 0           90.05       5965.95                 0  ...   \n1                 0           80.20       3581.60                 0  ...   \n2                 0           84.60         84.60                 1  ...   \n3                 0           94.80       4690.65                 1  ...   \n4                 0           54.05       2959.80                 0  ...   \n\n   StreamingMovies_No internet service  StreamingMovies_Yes  \\\n0                                    0                    1   \n1                                    0                    1   \n2                                    0                    1   \n3                                    0                    1   \n4                                    0                    1   \n\n   Contract_Month-to-month  Contract_One year  Contract_Two year  \\\n0                        0                  0                  1   \n1                        0                  1                  0   \n2                        1                  0                  0   \n3                        0                  0                  1   \n4                        0                  1                  0   \n\n   PaymentMethod_Bank transfer (automatic)  \\\n0                                        0   \n1                                        0   \n2                                        0   \n3                                        0   \n4                                        1   \n\n   PaymentMethod_Credit card (automatic)  PaymentMethod_Electronic check  \\\n0                                      1                               0   \n1                                      0                               1   \n2                                      0                               0   \n3                                      0                               1   \n4                                      0                               0   \n\n   PaymentMethod_Mailed check  Churn  \n0                           0      0  \n1                           0      0  \n2                           1      0  \n3                           0      0  \n4                           0      0  \n\n[5 rows x 41 columns]",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>gender</th>\n      <th>SeniorCitizen</th>\n      <th>Partner</th>\n      <th>Dependents</th>\n      <th>tenure</th>\n      <th>PhoneService</th>\n      <th>PaperlessBilling</th>\n      <th>MonthlyCharges</th>\n      <th>TotalCharges</th>\n      <th>MultipleLines_No</th>\n      <th>...</th>\n      <th>StreamingMovies_No internet service</th>\n      <th>StreamingMovies_Yes</th>\n      <th>Contract_Month-to-month</th>\n      <th>Contract_One year</th>\n      <th>Contract_Two year</th>\n      <th>PaymentMethod_Bank transfer (automatic)</th>\n      <th>PaymentMethod_Credit card (automatic)</th>\n      <th>PaymentMethod_Electronic check</th>\n      <th>PaymentMethod_Mailed check</th>\n      <th>Churn</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>0</th>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>66</td>\n      <td>0</td>\n      <td>0</td>\n      <td>90.05</td>\n      <td>5965.95</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>1</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>43</td>\n      <td>0</td>\n      <td>0</td>\n      <td>80.20</td>\n      <td>3581.60</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>2</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>84.60</td>\n      <td>84.60</td>\n      <td>1</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>3</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>49</td>\n      <td>0</td>\n      <td>0</td>\n      <td>94.80</td>\n      <td>4690.65</td>\n      <td>1</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>4</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>56</td>\n      <td>0</td>\n      <td>0</td>\n      <td>54.05</td>\n      <td>2959.80</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n  </tbody>\n</table>\n<p>5 rows × 41 columns</p>\n</div>"
+          },
+          "metadata": {}
+        }
+      ],
       "execution_count": 6,
       "metadata": {
         "jupyter": {
@@ -302,7 +354,73 @@
           }
         },
         "gather": {
-          "logged": 1636422624911
+          "logged": 1636423558755
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "\r\n",
+        "\r\n",
+        "\r\n",
+        "\r\n"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 19,
+          "data": {
+            "text/plain": "      gender  SeniorCitizen  Partner  Dependents  tenure  PhoneService  \\\n395        1              0        0           0      66             0   \n3797       0              0        0           0      43             0   \n232        0              0        0           0       1             0   \n3281       0              0        0           0      49             0   \n4821       0              0        0           0      56             0   \n...      ...            ...      ...         ...     ...           ...   \n6494       1              0        0           0      26             0   \n197        0              0        0           0      59             0   \n4799       1              0        0           0      10             0   \n3756       0              0        0           0       1             0   \n4719       0              0        0           0      36             0   \n\n      PaperlessBilling  MonthlyCharges  TotalCharges  MultipleLines_No  ...  \\\n395                  0           90.05       5965.95                 0  ...   \n3797                 0           80.20       3581.60                 0  ...   \n232                  0           84.60         84.60                 1  ...   \n3281                 0           94.80       4690.65                 1  ...   \n4821                 0           54.05       2959.80                 0  ...   \n...                ...             ...           ...               ...  ...   \n6494                 0           29.80        786.50                 0  ...   \n197                  0          111.35       6519.75                 0  ...   \n4799                 0           19.80        196.75                 1  ...   \n3756                 0           24.45         24.45                 0  ...   \n4719                 0           84.90       3067.20                 0  ...   \n\n      StreamingMovies_No internet service  StreamingMovies_Yes  \\\n395                                     0                    1   \n3797                                    0                    1   \n232                                     0                    1   \n3281                                    0                    1   \n4821                                    0                    1   \n...                                   ...                  ...   \n6494                                    0                    0   \n197                                     0                    1   \n4799                                    1                    0   \n3756                                    0                    0   \n4719                                    0                    1   \n\n      Contract_Month-to-month  Contract_One year  Contract_Two year  \\\n395                         0                  0                  1   \n3797                        0                  1                  0   \n232                         1                  0                  0   \n3281                        0                  0                  1   \n4821                        0                  1                  0   \n...                       ...                ...                ...   \n6494                        1                  0                  0   \n197                         1                  0                  0   \n4799                        1                  0                  0   \n3756                        1                  0                  0   \n4719                        1                  0                  0   \n\n      PaymentMethod_Bank transfer (automatic)  \\\n395                                         0   \n3797                                        0   \n232                                         0   \n3281                                        0   \n4821                                        1   \n...                                       ...   \n6494                                        0   \n197                                         0   \n4799                                        1   \n3756                                        0   \n4719                                        0   \n\n      PaymentMethod_Credit card (automatic)  PaymentMethod_Electronic check  \\\n395                                       1                               0   \n3797                                      0                               1   \n232                                       0                               0   \n3281                                      0                               1   \n4821                                      0                               0   \n...                                     ...                             ...   \n6494                                      0                               0   \n197                                       0                               1   \n4799                                      0                               0   \n3756                                      0                               0   \n4719                                      0                               1   \n\n      PaymentMethod_Mailed check  Churn  \n395                            0      0  \n3797                           0      0  \n232                            1      0  \n3281                           0      0  \n4821                           0      0  \n...                          ...    ...  \n6494                           1      0  \n197                            0      0  \n4799                           0      0  \n3756                           1      0  \n4719                           0      0  \n\n[1409 rows x 41 columns]",
+            "text/html": "<div>\n<style scoped>\n    .dataframe tbody tr th:only-of-type {\n        vertical-align: middle;\n    }\n\n    .dataframe tbody tr th {\n        vertical-align: top;\n    }\n\n    .dataframe thead th {\n        text-align: right;\n    }\n</style>\n<table border=\"1\" class=\"dataframe\">\n  <thead>\n    <tr style=\"text-align: right;\">\n      <th></th>\n      <th>gender</th>\n      <th>SeniorCitizen</th>\n      <th>Partner</th>\n      <th>Dependents</th>\n      <th>tenure</th>\n      <th>PhoneService</th>\n      <th>PaperlessBilling</th>\n      <th>MonthlyCharges</th>\n      <th>TotalCharges</th>\n      <th>MultipleLines_No</th>\n      <th>...</th>\n      <th>StreamingMovies_No internet service</th>\n      <th>StreamingMovies_Yes</th>\n      <th>Contract_Month-to-month</th>\n      <th>Contract_One year</th>\n      <th>Contract_Two year</th>\n      <th>PaymentMethod_Bank transfer (automatic)</th>\n      <th>PaymentMethod_Credit card (automatic)</th>\n      <th>PaymentMethod_Electronic check</th>\n      <th>PaymentMethod_Mailed check</th>\n      <th>Churn</th>\n    </tr>\n  </thead>\n  <tbody>\n    <tr>\n      <th>395</th>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>66</td>\n      <td>0</td>\n      <td>0</td>\n      <td>90.05</td>\n      <td>5965.95</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>3797</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>43</td>\n      <td>0</td>\n      <td>0</td>\n      <td>80.20</td>\n      <td>3581.60</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>232</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>84.60</td>\n      <td>84.60</td>\n      <td>1</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>3281</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>49</td>\n      <td>0</td>\n      <td>0</td>\n      <td>94.80</td>\n      <td>4690.65</td>\n      <td>1</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>4821</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>56</td>\n      <td>0</td>\n      <td>0</td>\n      <td>54.05</td>\n      <td>2959.80</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>...</th>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n      <td>...</td>\n    </tr>\n    <tr>\n      <th>6494</th>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>26</td>\n      <td>0</td>\n      <td>0</td>\n      <td>29.80</td>\n      <td>786.50</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>197</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>59</td>\n      <td>0</td>\n      <td>0</td>\n      <td>111.35</td>\n      <td>6519.75</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>4799</th>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>10</td>\n      <td>0</td>\n      <td>0</td>\n      <td>19.80</td>\n      <td>196.75</td>\n      <td>1</td>\n      <td>...</td>\n      <td>1</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>3756</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>24.45</td>\n      <td>24.45</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n    </tr>\n    <tr>\n      <th>4719</th>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>36</td>\n      <td>0</td>\n      <td>0</td>\n      <td>84.90</td>\n      <td>3067.20</td>\n      <td>0</td>\n      <td>...</td>\n      <td>0</td>\n      <td>1</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>0</td>\n      <td>1</td>\n      <td>0</td>\n      <td>0</td>\n    </tr>\n  </tbody>\n</table>\n<p>1409 rows × 41 columns</p>\n</div>"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 19,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1636423343772
+        }
+      }
+    },
+    {
+      "cell_type": "code",
+      "source": [
+        "len(y)"
+      ],
+      "outputs": [
+        {
+          "output_type": "execute_result",
+          "execution_count": 18,
+          "data": {
+            "text/plain": "7043"
+          },
+          "metadata": {}
+        }
+      ],
+      "execution_count": 18,
+      "metadata": {
+        "jupyter": {
+          "source_hidden": false,
+          "outputs_hidden": false
+        },
+        "nteract": {
+          "transient": {
+            "deleting": false
+          }
+        },
+        "gather": {
+          "logged": 1636423235625
         }
       }
     },
