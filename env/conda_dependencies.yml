@@ -1,0 +1,10 @@
+channels:
+- conda-forge
+dependencies:
+- python=3.6.2
+- pip:
+  - azureml-defaults==1.36.0
+  - scikit-learn
+  - pandas
+  - azureml-core
+name: azureml_419c4c1d327b200b6c3437d401d352ef
