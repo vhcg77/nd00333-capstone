@@ -2,3 +2,5 @@
 *.zip
 train/
 test/
+.vscode/
+model/
