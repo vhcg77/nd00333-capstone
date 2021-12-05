@@ -1,8 +1,9 @@
 {
-    "name": "udacity_ml",
-    "version": null,
+    "name": "AzureML-AutoML",
+    "version": "94",
     "environmentVariables": {
-        "EXAMPLE_ENV_VAR": "EXAMPLE_VALUE"
+        "EXAMPLE_ENV_VAR": "EXAMPLE_VALUE",
+        "AZUREML_ENTRY_SCRIPT": "score.py"
     },
     "python": {
         "userManagedDependencies": false,
@@ -11,8 +12,8 @@
         "baseCondaEnvironment": null
     },
     "docker": {
-        "enabled": false,
-        "baseImage": "mcr.microsoft.com/azureml/intelmpi2018.3-ubuntu16.04:20210507.v1",
+        "enabled": true,
+        "baseImage": "mcr.microsoft.com/azureml/openmpi3.1.2-ubuntu18.04:20211124.v1",
         "baseDockerfile": null,
         "sharedVolumes": true,
         "shmSize": null,

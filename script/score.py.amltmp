@@ -13,7 +13,10 @@ def init():
 
 def run(data):
     try:
-        result = model.predict(data)
+        input_data = json.loads(data)
+        json_data = input_data['data']
+        dataframe = pd.DataFrame(json_data)
+        result = model.predict(dataframe)
         return result.tolist()
     except Exception as e:
         error = str(e)
