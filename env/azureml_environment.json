@@ -2,8 +2,7 @@
     "name": "AzureML-AutoML",
     "version": "94",
     "environmentVariables": {
-        "EXAMPLE_ENV_VAR": "EXAMPLE_VALUE",
-        "AZUREML_ENTRY_SCRIPT": "score.py"
+        "EXAMPLE_ENV_VAR": "EXAMPLE_VALUE"
     },
     "python": {
         "userManagedDependencies": false,
